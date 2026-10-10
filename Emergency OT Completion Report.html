@@ -1,0 +1,3163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Emergency Overtime Report</title>
+
+<style>
+    @page {
+        size: Letter portrait;
+        margin: 0.35in 0.82in 0.30in 0.82in;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    html, body {
+        margin: 0;
+        padding: 0;
+        background: #eee;
+        color: #000;
+        font-family: "Times New Roman", Times, serif;
+    }
+
+    body {
+        font-size: 11pt;
+    }
+
+    .controls {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 14px;
+        background: white;
+        border-bottom: 1px solid #ccc;
+        font-family: Arial, sans-serif;
+    }
+
+    button {
+        border: 0;
+        border-radius: 4px;
+        padding: 7px 13px;
+        font-size: 13px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .btn-blue {
+        background: #007bff;
+        color: white;
+    }
+
+    .btn-lavender { background: #B39ADD !important; color: #171329 !important; border: 0 !important; }
+.btn-lavender:hover { background: #A58BD2 !important; }
+    .btn-howto { background: #E7DEF5 !important; color: #171329 !important; border: 0 !important; }
+    .btn-howto:hover { background: #DCCFEE !important; }
+.btn-green {
+        background: #28a745;
+        color: white;
+    }
+
+    .btn-red {
+        background: #dc3545;
+        color: white;
+    }
+
+    .import-export-menu { position: relative; display: inline-block; }
+    .import-export-dropdown {
+        display: none; position: absolute; top: calc(100% + 4px); left: 0; min-width: 180px;
+        background: white; border: 1px solid #aaa; border-radius: 4px; box-shadow: 0 3px 8px rgba(0,0,0,.22);
+        z-index: 1000; overflow: hidden;
+    }
+    .import-export-dropdown.open { display: block; }
+    .import-export-dropdown button {
+        display: block; width: 100%; padding: 10px 14px; border: 0; border-radius: 0;
+        background: white; color: #222; text-align: left; font-weight: normal; font-size: 13px;
+    }
+    .import-export-dropdown button:hover { background: #f0f0f0; }
+
+    .action-cell {
+        position: relative;
+        width: 0;
+        padding: 0;
+        overflow: visible;
+    }
+
+    .remove-btn {
+        position: absolute;
+        left: -26px;
+        top: 50%;
+        transform: translateY(-50%);
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        width: 20px;
+        height: 20px;
+        font-size: 13px;
+        font-weight: bold;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        z-index: 10;
+    }
+
+    .remove-btn:hover {
+        background-color: #bd2130;
+    }
+
+    /* ---------- SCREEN CONTAINER (Continuous Form) ---------- */
+    #screen-view {
+        width: 8.5in;
+        margin: 15px auto;
+        padding: 0.35in 0.82in 0.30in 0.82in;
+        background: white;
+        box-shadow: 0 0 5px rgba(0,0,0,.25);
+    }
+
+    #screen-view,
+    #screen-view *,
+    #print-view,
+    #print-view * {
+        font-family: "Times New Roman", Times, serif !important;
+    }
+
+    /* ---------- COMMON STYLES ---------- */
+    .header {
+        text-align: center;
+        font-weight: bold;
+        font-size: 14.5pt;
+        line-height: 1.08;
+        letter-spacing: .15px;
+        margin-top: 0.02in;
+        margin-bottom: 0.25in;
+    }
+
+    .continuation-title {
+        text-align: center;
+        font-weight: bold;
+        font-size: 12pt;
+        margin-top: 0.10in;
+        margin-bottom: 0.15in;
+    }
+
+    .memo {
+        font-size: 11.5pt;
+        line-height: 1.15;
+        margin-bottom: 0.25in;
+    }
+
+    .memo-row {
+        display: grid;
+        align-items: start;
+        margin-bottom: 0.12in;
+    }
+
+    .memo-row.to {
+        grid-template-columns: 1.00in 1fr 2ch 0.55in 1.20in;
+    }
+
+    .memo-row.from {
+        grid-template-columns: 1.00in 1fr 2ch 0.55in 1.20in;
+    }
+
+    .memo-row.subject {
+        grid-template-columns: 1.00in 1fr;
+        margin-bottom: 0.15in;
+    }
+
+    .memo-label {
+        font-weight: bold;
+        display: flex;
+        align-items: flex-start;
+        white-space: nowrap;
+        padding-top: 0.01in;
+    }
+
+    .memo-value {
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+    }
+
+    .subject-text {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        height: .43in;
+        margin: 0;
+        padding: 0;
+        border: 1px solid transparent;
+        outline: none;
+        background: transparent;
+        resize: none;
+        overflow: hidden;
+        line-height: 1.08;
+        font-family: "Times New Roman", Times, serif !important;
+        font-size: inherit;
+        font-weight: normal;
+        color: inherit;
+        vertical-align: top;
+    }
+
+    .clean-input,
+    .memo select,
+    .memo input,
+    .memo textarea {
+        border: none;
+        outline: none;
+        background: transparent;
+        font-family: inherit;
+        font-size: inherit;
+        color: inherit;
+        padding: 0;
+        margin: 0;
+        width: 100%;
+    }
+
+    .date-input {
+        width: 1.20in;
+        white-space: nowrap;
+        display: block;
+        border: none;
+        border-bottom: 1px solid black;
+        background: transparent;
+        font-family: inherit;
+        font-size: inherit;
+        padding: 0 2px;
+        outline: none;
+    }
+
+    .request-line {
+        display: grid;
+        grid-template-columns: 3.85in 1.35in 1.66in;
+        align-items: end;
+        font-size: 11pt;
+        margin-bottom: 0.20in;
+    }
+
+    .request-label {
+        white-space: nowrap;
+    }
+
+    .control-box,
+    .ccfc-box {
+        display: flex;
+        align-items: end;
+        gap: 5px;
+        white-space: nowrap;
+    }
+
+    .control-box input {
+        width: .70in;
+    }
+
+    .ccfc-box input {
+        width: 1.15in;
+    }
+
+    .underlined-input {
+        border: none;
+        border-bottom: 1px solid black;
+        background: transparent;
+        font-family: inherit;
+        font-size: inherit;
+        padding: 0 2px;
+        outline: none;
+    }
+
+    .employee-table-wrapper {
+        margin-bottom: 0.25in;
+    }
+
+    .employee-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        font-size: 11pt;
+        margin: 0;
+    }
+
+    /* Optimized Column Widths for comfortable spacing */
+    .employee-table col.action { width: 0.25in; }
+    .employee-table col.num { width: 0.30in; }
+    .employee-table col.name { width: 1.60in; }
+    .employee-table col.position { width: 1.15in; }
+    .employee-table col.time { width: 1.30in; }
+    .employee-table col.hours { width: 0.55in; }
+    .employee-table col.date { width: 0.95in; }
+    .employee-table col.type { width: 0.50in; }
+
+    .employee-table th,
+    .employee-table td {
+        border: 0;
+        padding: 0 2px;
+        text-align: left;
+        vertical-align: middle;
+        white-space: nowrap;
+        height: .20in;
+    }
+
+    .employee-table th {
+        font-weight: bold;
+        height: .22in;
+        padding-bottom: 2px;
+    }
+
+    .employee-table th .heading {
+        display: inline-block;
+        border-bottom: 1px solid #000;
+        line-height: 1.0;
+        font-weight: bold;
+    }
+
+    .employee-table input,
+    .employee-table select {
+        width: 100%;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        padding: 0;
+        margin: 0;
+        font-family: inherit;
+        font-size: inherit;
+        color: inherit;
+    }
+
+    .employee-table select {
+        appearance: auto;
+    }
+
+    .time-cell-container {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        width: 100%;
+    }
+
+    .time-cell-container select {
+        flex: 1;
+        min-width: 0;
+        font-size: 8.5pt;
+    }
+
+    .add-entry-container {
+        margin-top: 8px;
+        margin-bottom: 15px;
+    }
+
+    .section {
+        font-size: 10.5pt;
+        line-height: 1.12;
+    }
+
+    .section-b {
+        margin-bottom: 0.40in;
+        display: flex;
+        align-items: baseline;
+    }
+
+    .section-c {
+        margin-bottom: 0.40in;
+    }
+
+    .section-d {
+        margin-bottom: 0.40in;
+    }
+
+    .section-title {
+        font-weight: bold;
+    }
+
+    .letter {
+        display: inline-block;
+        width: .24in;
+        font-weight: bold;
+    }
+
+    .total-line {
+        display: inline-block;
+        width: 1.08in;
+        border-bottom: 1px solid #000;
+        margin-left: .04in;
+        text-align: center;
+        min-height: .16in;
+    }
+
+    .italic {
+        font-style: italic;
+        font-size: 9.5pt;
+    }
+
+    .reason-text {
+        margin-left: .24in;
+        margin-top: .06in;
+        margin-right: .50in;
+        width: calc(100% - .24in - .50in);
+        height: 0.72in;
+        min-height: 0.72in;
+        max-height: 0.72in;
+        line-height: 1.15;
+        border: 0;
+        outline: 0;
+        resize: none;
+        overflow: hidden;
+        font-family: inherit;
+        font-size: 10.5pt;
+        padding: 0;
+        background: transparent;
+    }
+
+    .completion-text {
+        margin-left: .24in;
+        margin-top: .06in;
+        margin-right: .50in;
+        width: calc(100% - .24in - .50in);
+        height: 0.58in;
+        min-height: 0.58in;
+        max-height: 0.58in;
+        line-height: 1.15;
+        border: 0;
+        outline: 0;
+        resize: none;
+        overflow: hidden;
+        font-family: inherit;
+        font-size: 10.5pt;
+        padding: 0;
+        background: transparent;
+    }
+
+    .signatures {
+        font-size: 11pt;
+        margin-top: 0.10in;
+        padding-bottom: 0.05in;
+    }
+
+    .sig-row {
+        display: grid;
+        grid-template-columns: .24in max-content 3ch 1fr 3ch .45in .75in;
+        align-items: start;
+        margin-bottom: .22in;
+    }
+
+    .sig-label {
+        font-weight: bold;
+        padding-top: .02in;
+        width: .24in;
+    }
+
+    .sig-caption {
+        white-space: nowrap;
+        font-weight: bold;
+        padding-top: .02in;
+    }
+
+    .sig-line-wrap {
+        width: 100%;
+        text-align: center;
+    }
+
+    .sig-line {
+        display: block;
+        width: 100%;
+        height: .16in;
+        border-bottom: 1px solid #000;
+        margin: 0;
+    }
+
+    .sig-name {
+        display: block;
+        width: 100%;
+        text-align: center;
+        margin-top: .03in;
+        white-space: nowrap;
+        line-height: 1.05;
+    }
+
+    .sig-name select {
+        display: block;
+        width: 100%;
+        border: 0;
+        background: transparent;
+        outline: 0;
+        font-family: "Times New Roman", Times, serif;
+        font-size: inherit;
+        color: inherit;
+        padding: 0;
+        margin: 0;
+        appearance: auto;
+        text-align: center;
+    }
+
+    .sig-date-label {
+        text-align: right;
+        padding-right: .08in;
+        padding-top: .02in;
+    }
+
+    .sig-date-line {
+        display: block;
+        height: .16in;
+        border-bottom: 1px solid #000;
+        margin-top: .02in;
+    }
+
+    .footer {
+        text-align: right;
+        font-size: 9.5pt;
+        line-height: 1.05;
+        margin-top: 10px;
+    }
+
+    /* ---------- PRINT VIEW STYLES ---------- */
+    #print-view {
+        display: none;
+    }
+
+    @media screen {
+        #print-view {
+            display: none !important;
+        }
+    }
+
+    @media print {
+        html, body {
+            width: 8.5in;
+            background: white;
+        }
+
+        .controls {
+            display: none !important;
+        }
+
+        #screen-view {
+            display: none !important;
+        }
+
+        #print-view {
+            display: block !important;
+        }
+
+        .print-page {
+            width: 8.5in;
+            min-height: 11in;
+            margin: 0;
+            padding: 0.35in 0.82in 0.30in 0.82in;
+            page-break-after: always;
+            break-after: page;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .print-page:last-child {
+            page-break-after: avoid;
+            break-after: avoid;
+        }
+
+        .print-body {
+            flex: 1;
+        }
+
+        .print-page .section-d {
+            margin-bottom: 0.20in !important;
+        }
+
+        .print-page .sig-row {
+            margin-bottom: 0.11in !important;
+        }
+
+        input, select, textarea {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            border: none !important;
+            background: transparent !important;
+        }
+
+        .underlined-input {
+            border-bottom: 1px solid black !important;
+        }
+
+        select {
+            appearance: none !important;
+            -webkit-appearance: none !important;
+        }
+    }
+
+    /* ---------- PRINT REFINEMENT: STANDARD FORM REPLICA ---------- */
+    @media print {
+        @page { size: Letter portrait; margin: 0; }
+        .print-page { width: 8.5in; min-height: 11in; padding: 0.35in 0.76in 0.30in 0.76in; }
+        .print-page .header { font-size: 14.0pt; line-height: 1.08; margin-top: 0; margin-bottom: 0.42in; }
+        .print-page .memo { font-size: 11.5pt; line-height: 1.15; margin-bottom: 0.27in; }
+        .print-page .memo-row { margin-bottom: 0.15in; }
+        .print-page .request-line { grid-template-columns: 3.20in 1.25in 2.53in; margin-bottom: 0.20in; }
+        .print-page .employee-table { font-size: 11pt; }
+        .print-page .employee-table col.num { width: 0.30in; }
+        .print-page .employee-table col.name { width: 1.45in; }
+        .print-page .employee-table col.position { width: 1.10in; }
+        .print-page .employee-table col.time { width: 1.16in; }
+        .print-page .employee-table col.hours { width: 0.51in; }
+        .print-page .employee-table col.date { width: 0.90in; }
+        .print-page .employee-table col.type { width: 0.80in; }
+        .print-page .employee-table th, .print-page .employee-table td { padding: 0 1px; height: 0.20in; }
+        .print-page .employee-table th { height: 0.22in; padding-bottom: 2px; }
+        .print-page .employee-table-wrapper { margin-bottom: 0.25in; }
+        .print-page .section-b { margin-bottom: 0.26in; }
+        .print-page .section-c { margin-bottom: 0.43in; }
+        .print-page .section-d { margin-bottom: 0.20in !important; }
+        .print-page .signatures { margin-top: 0.10in; }
+        .print-page .sig-row { margin-bottom: 0.11in !important; }
+        .print-page .sig-date-line { height: auto; border-bottom: 0; margin-top: 0; }
+        .print-page .sig-date-value { display: block; width: 1.10in; margin-top: -0.02in; border-bottom: 1px solid #000; font-family: Arial, Helvetica, sans-serif !important; font-size: 18pt; line-height: 1.0; text-align: right; white-space: nowrap; }
+    }
+
+
+    /* ---------- PRINT ALIGNMENT REVISION 2 ---------- */
+    @media print {
+        @page { size: Letter portrait; margin: 0; }
+
+        .print-page {
+            width: 8.5in;
+            min-height: 11in;
+            padding: 0.35in 0.48in 0.30in 0.48in;
+        }
+
+        /* Keep section letters and section text on one consistent vertical grid. */
+        .print-page .section {
+            font-size: 10.5pt;
+            line-height: 1.12;
+        }
+        .print-page .letter {
+            width: 0.34in;
+            margin: 0;
+        }
+        .print-page .section-b {
+            display: grid;
+            grid-template-columns: 0.34in max-content max-content 1fr;
+            column-gap: 0.04in;
+            align-items: baseline;
+            margin-bottom: 0.26in;
+        }
+        .print-page .section-c > div:first-child,
+        .print-page .section-d > div:first-child {
+            display: block;
+            padding-left: 0;
+        }
+        .print-page .section-c .letter,
+        .print-page .section-d .letter {
+            display: inline-block;
+            width: 0.34in;
+        }
+        .print-page .reason-text,
+        .print-page .completion-text {
+            margin-left: 0.34in;
+            width: calc(100% - 0.34in);
+        }
+
+        /* Fixed signature columns prevent the date fields from drifting or wrapping. */
+        .print-page .sig-row {
+            display: grid;
+            grid-template-columns: 0.34in 1.72in 0.08in 3.05in 0.10in 0.48in 1.15in;
+            column-gap: 0;
+            align-items: start;
+            margin-bottom: 0.11in !important;
+        }
+        .print-page .sig-label {
+            width: auto;
+        }
+        .print-page .sig-caption {
+            white-space: nowrap;
+        }
+        .print-page .sig-line-wrap {
+            width: 100%;
+        }
+        .print-page .sig-date-label {
+            text-align: left;
+            padding: 0;
+            white-space: nowrap;
+        }
+        .print-page .sig-date-line {
+            width: 100%;
+            height: auto;
+            margin: 0;
+            border-bottom: 0;
+        }
+        .print-page .sig-date-value {
+            display: block;
+            width: 100%;
+            margin: -0.02in 0 0 0;
+            border-bottom: 1px solid #000;
+            font-family: "Times New Roman", Times, serif !important;
+            font-size: 11pt;
+            line-height: 1.15;
+            text-align: right;
+            white-space: nowrap;
+        }
+    }
+
+    /* ---------- SECTION C/D WRAPPING ALIGNMENT REVISION 3 ---------- */
+    @media print {
+        .print-page .section-heading-grid {
+            display: grid;
+            grid-template-columns: 0.34in minmax(0, 1fr);
+            column-gap: 0;
+            align-items: start;
+            width: 100%;
+        }
+        .print-page .section-heading-grid > .letter {
+            grid-column: 1;
+            width: auto;
+            margin: 0;
+            padding: 0;
+        }
+        .print-page .section-heading-grid > .section-copy {
+            grid-column: 2;
+            min-width: 0;
+            margin: 0;
+            padding: 0;
+            line-height: 1.12;
+        }
+        .print-page .section-c .reason-text,
+        .print-page .section-d .completion-text {
+            display: block;
+            margin-left: 0.34in;
+            width: calc(100% - 0.34in);
+        }
+    }
+
+
+    /* ---------- PRINT REFINEMENT REVISION 4: UNIFIED SECTION GRID ---------- */
+    .section-heading-grid {
+        display: grid;
+        grid-template-columns: 0.34in minmax(0, 1fr);
+        column-gap: 0;
+        align-items: start;
+        width: 100%;
+    }
+
+    .section-heading-grid > .letter {
+        grid-column: 1;
+        width: auto;
+        margin: 0;
+        padding: 0;
+        line-height: 1.12;
+    }
+
+    .section-heading-grid > .section-copy {
+        grid-column: 2;
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+        line-height: 1.12;
+        overflow-wrap: normal;
+        word-break: normal;
+    }
+
+    .reason-text,
+    .completion-text {
+        display: block;
+        margin-left: 0.34in;
+        width: calc(100% - 0.34in);
+    }
+
+    .print-response-text {
+        margin-left: 0.34in;
+        width: calc(100% - 0.34in);
+        margin-top: 0.06in;
+        height: 0.72in;
+        overflow: hidden;
+        white-space: pre-wrap;
+        line-height: 1.15;
+    }
+
+    .completion-response {
+        height: 0.58in;
+    }
+
+    @media screen {
+        #screen-view .section-heading-grid {
+            grid-template-columns: 0.34in minmax(0, 1fr);
+        }
+        #screen-view .section-copy {
+            max-width: 100%;
+        }
+    }
+
+    @media print {
+        .print-page .section-heading-grid {
+            grid-template-columns: 0.34in minmax(0, 1fr);
+        }
+        .print-page .print-response-text {
+            margin-left: 0.34in;
+            width: calc(100% - 0.34in);
+        }
+    }
+
+
+
+    /* ---------- FINAL ALIGNMENT REVISION 5 ---------- */
+    /* One fixed text column for Sections C and D in both views. */
+    .section-heading-grid {
+        display: grid !important;
+        grid-template-columns: 0.42in minmax(0, 1fr) !important;
+        column-gap: 0 !important;
+        align-items: start !important;
+        width: 100% !important;
+    }
+
+    .section-heading-grid > .letter {
+        grid-column: 1 !important;
+        width: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        line-height: 1.12 !important;
+    }
+
+    .section-heading-grid > .section-copy {
+        grid-column: 2 !important;
+        min-width: 0 !important;
+        width: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        line-height: 1.12 !important;
+        overflow-wrap: normal !important;
+        word-break: normal !important;
+    }
+
+    .reason-text,
+    .completion-text,
+    .print-response-text {
+        display: block !important;
+        margin-left: 0.42in !important;
+        width: calc(100% - 0.42in) !important;
+        box-sizing: border-box !important;
+    }
+
+    .section-c,
+    .section-d {
+        width: 100% !important;
+    }
+
+    /* Keep the print version on the same left/right grid as the reference. */
+    @media print {
+        .print-page {
+            box-sizing: border-box !important;
+            width: 8.5in !important;
+            min-height: 11in !important;
+            padding: 0.35in 0.48in 0.30in 0.73in !important;
+        }
+
+        .print-page .section-heading-grid {
+            grid-template-columns: 0.42in minmax(0, 1fr) !important;
+        }
+
+        .print-page .print-response-text {
+            margin-left: 0.42in !important;
+            width: calc(100% - 0.42in) !important;
+            white-space: pre-wrap !important;
+            overflow-wrap: normal !important;
+            word-break: normal !important;
+        }
+
+        .print-page .section-c,
+        .print-page .section-d {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+        }
+
+        /* Align both signature rows to one fixed date column. */
+        .print-page .sig-row {
+            grid-template-columns: 0.42in 1.72in 0.08in 3.05in 0.10in 0.48in 1.15in !important;
+            width: 100% !important;
+        }
+    }
+
+</style>
+
+<style>
+/* REVISION 8 - right-justify CTRL# and CC/FC# in the printout */
+@media print {
+  .print-page .request-line {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto auto !important;
+    column-gap: 0.18in !important;
+    align-items: end !important;
+    width: 100% !important;
+  }
+
+  .print-page .request-label {
+    min-width: 0 !important;
+    text-align: left !important;
+  }
+
+  .print-page .control-box,
+  .print-page .ccfc-box {
+    justify-self: end !important;
+    width: auto !important;
+    margin: 0 !important;
+  }
+
+  .print-page .control-box input,
+  .print-page .ccfc-box input,
+  .print-page .control-box .underlined-input,
+  .print-page .ccfc-box .underlined-input {
+    flex: 0 0 auto !important;
+  }
+}
+</style>
+
+
+<style>
+/* CC/FC# multi-row entry control: screen only. */
+.ccfc-entry-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.ccfc-entry-row {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+.screen-ccfc-row {
+    width: 1.15in !important;
+    max-width: 1.15in !important;
+    box-sizing: border-box;
+}
+.ccfc-add-btn, .ccfc-remove-btn {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    line-height: 16px;
+    font-size: 14px;
+    border: 1px solid #777;
+    border-radius: 3px;
+    background: #f4f4f4;
+    cursor: pointer;
+}
+.ccfc-add-btn { font-weight: bold; }
+.ccfc-remove-btn { font-size: 13px; }
+
+@media print {
+  .print-ccfc-stack {
+    width: 1.15in !important;
+    max-width: 1.15in !important;
+    min-width: 1.15in !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+  .print-ccfc-value {
+    display: block !important;
+    width: 1.15in !important;
+    max-width: 1.15in !important;
+    min-width: 1.15in !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+    font-size: 9pt !important;
+  }
+  /* Only the bottom CC/FC# row keeps the underline in the printout. */
+  .print-ccfc-value:not(:last-child) {
+    border-bottom: none !important;
+  }
+}
+</style>
+
+
+<style>
+/* V87 - move Part E up one physical Part-A line only; keep Part F unchanged. */
+@media print {
+  .print-page .signatures .sig-row:nth-child(1) {
+    transform: translateY(-0.213in) !important;
+  }
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+
+<style>
+.how-to-use-overlay{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;font-family:Arial,sans-serif}
+.how-to-use-panel{width:min(680px,100%);max-height:85vh;overflow:auto;background:#fff;color:#222;border-radius:9px;box-shadow:0 8px 32px rgba(0,0,0,.3);padding:20px 24px;box-sizing:border-box;font:15px/1.5 Arial,sans-serif}
+.how-to-use-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-bottom:1px solid #ddd;padding-bottom:10px;margin-bottom:12px}
+.how-to-use-heading h2{font-size:20px;line-height:1.25;margin:0}
+.how-to-use-close{border:0;background:transparent;font-size:28px;line-height:1;cursor:pointer;color:#555;padding:0 3px}
+.how-to-use-panel ol{padding-left:24px;margin:12px 0}
+.how-to-use-panel li{margin:0 0 9px}
+.how-to-use-note{background:#f3f5f7;border-radius:5px;padding:10px 12px;margin:14px 0}
+.how-to-use-footer{text-align:right;margin-top:12px}
+@media(max-width:600px){.how-to-use-panel{padding:16px;font-size:14px}.how-to-use-heading h2{font-size:18px}}
+</style>
+
+</head>
+
+<body>
+
+<div class="controls">
+    <button class="btn-blue" onclick="triggerPrint()">Print / Save PDF</button>
+    <button class="btn-green" style="background:#28a745 !important; color:white !important;" onclick="saveEOTFile()">Save EOT</button>
+    <button class="btn-blue" onclick="document.getElementById('eotFileInput').click()">Open EOT</button>
+    <div class="import-export-menu">
+        <button class="btn-lavender" onclick="toggleImportExportMenu(event)">Import / Export ▾</button>
+        <div id="importExportDropdown" class="import-export-dropdown">
+            <button type="button" onclick="triggerXLSXImport()">Import XLSX</button>
+            <button type="button" onclick="exportToXLSX()">Export XLSX</button>
+        </div>
+    </div>
+    <input type="file" id="xlsxFileInput" style="display:none" accept=".xlsx,.xls" onchange="triggerXLSXImport(event)">
+    <input type="file" id="eotFileInput" style="display:none" accept=".eot,application/octet-stream" onchange="triggerEOTImport(event)">
+    <button type="button" class="btn-howto" onclick="openHowToUse()">How to Use</button>
+    <button class="btn-red" onclick="resetEntries()">Reset All Entries</button>
+</div>
+
+<div id="howToUseModal" class="how-to-use-overlay" role="dialog" aria-modal="true" aria-labelledby="howToUseTitle" style="display:none">
+  <div class="how-to-use-panel">
+    <div class="how-to-use-heading">
+      <h2 id="howToUseTitle">How to Use — Emergency OT Completion Report</h2>
+      <button type="button" class="how-to-use-close" aria-label="Close" onclick="closeHowToUse()">×</button>
+    </div>
+    <ol>
+      <li><strong>Complete the report information.</strong> Fill in the memo/report fields and employee information as applicable.</li>
+      <li><strong>Enter each employee’s overtime.</strong> Complete the available employee, position, date, start-time, end-time, and CTO/Cash fields. Use the entry controls to add or remove entries as needed.</li>
+      <li><strong>Review the report.</strong> Check all names, dates, times, and narrative fields before printing or saving.</li>
+      <li><strong>Print / Save PDF</strong> opens the browser’s print window. Choose a printer or “Save as PDF.”</li>
+      <li><strong>Save EOT</strong> saves a working EOT data file. Use <strong>Open EOT</strong> to reopen a previously saved EOT file.</li>
+      <li><strong>Import / Export</strong> lets you import information from an Excel workbook or export the current report to XLSX.</li>
+      <li><strong>Reset All Entries</strong> clears the current entries. Use it only when you intend to start over.</li>
+    </ol>
+    <p class="how-to-use-note">Tip: Save your EOT file before closing the page. Excel import/export may require an internet connection to load its supporting library.</p>
+    <div class="how-to-use-footer"><button type="button" class="btn-blue" onclick="closeHowToUse()">Close</button></div>
+  </div>
+</div>
+
+<!-- CONTINUOUS SCREEN VIEW FOR DATA ENTRY -->
+<div id="screen-view"></div>
+
+<!-- PAGINATED PRINT VIEW (Generated dynamically on print) -->
+<div id="print-view"></div>
+
+<script>
+const employeeList = [
+    "Aipoalani, Adam", "Alip, Davin", "Almasagidi, Khaled", "Arruda, Cortney", "Baptista, Jayson", "Bidad, Kaleo", "Cacabelos, Delton", "Camacho, Stacey", "Cardoza, Jason", "Carvalho, Eric", "Carvalho, Ricky", "CarvalhoWilbur, Briecian", "Castaneda, Jeremy", "Cawagas, Roger", "Chiquita, John", "Cogo, William", "Corpuz, Casey", "Corpuz, Clifford", "Crivello, Wyatt-Levi", "Crum, Kainoa", "Dacalio, Wayne", "Del Mar, Anthony", "Devera, Keenan", "Dupre, Michael", "Ebreo, Michael", "Enos, Reemoni", "Estabilio, Bradley", "Fuerte, Jake", "Gomes, Karlton", "Gomes, Randy", "Graig, Mikhail", "Haleamau-Martin, Kekoa", "Harris, Chance", "Higa, Tyrus", "Horvath, Corbin", "Hurley, Allen", "Idomoto, Alexander", "Juan, Brandon", "Kaaua, Rayce", "Kagawa, Troystan", "Kahauolopua, Tonylee", "Kahele, Gibson", "Kailiwai, Daniel", "Kalingo, Timothy", "Kaolulo-Takiue, Kaleb", "Kealoha, Bradley", "Kealoha-Mattos, Chelson", "Kidani, Jerrod", "Lee Loy, Benedict", "Lee, Robert", "Mahoe, Tyler", "Mateo, Thomas", "Mattos, Andrew", "Medeiros, Heidi", "Medeiros, Kailan", "Mortensen, Aukelenui", "Moses, Stacey", "Moses-Kalingo, Jennifer", "Mosley, Kentzie", "Nabarro, Royden", "Nakamoto, Kaipo", "Navarro-Castillo, Deltan", "Nelson, Shane", "Omori, Troy", "Orcino, Franklin", "Ortega, Nathan", "Oshiro, Rickey", "Pa, Aaron", "Pacheco, Kason", "Paiva, Audra", "Paiva, Russell", "Perez, Francis", "Rapozo, Kane", "Reyes-Dawson, Manoa", "Rivera, Franklin", "Rodero, Glenn", "Romeo, Christopher", "Rosario, Robert", "Samson, Bryson", "Santos, Elgin", "Santos, Walter", "Schauf, Curtis", "Schneider, Benjamin", "Seghorn, Debbie", "Shioji, Ryan", "Silva, Cameron", "Simao, Dean", "Simeon, Allan", "Sioloa, Stevenson", "Soares, Marcia", "Souza, Darin", "Spencer, Kaiponohea", "Sueda, Aisha", "Supe, Courtney", "Tabac, Troy", "Toledo, Isaiah", "Tomori, Hugh", "Valdez, Victor", "Vargas, Duane", "Villa, Remy", "Vincent, Wendell", "Vuckovich, John", "Watanabe, Chad", "White, Thomas", "Wong, Anthony", "Yamasaki, Lesley"
+];
+
+const positionList = [
+    "ACCT CLK IV", "ADMIN ASST III", "AMH", "AMS II", "BMS I", "BMS II", "BMW I", "BSS II", 
+    "DRFT TECH VI", "ENGR I", "ENGR II", "ENGR III", "ENGR IV", "ENGR TECH V", "ENGR TECH VI", 
+    "ENGR V", "ENGR VI", "EO I", "EO II", "EO III", "GL I", "HC INSP III", "HC INSP IV", 
+    "HCI I", "HCI II", "HCMS II", "HCMS IV", "HCMS VI", "HEO", "HMS I", "HR ASST IV", 
+    "HVCEM I", "HVY TRK DR", "JAN II", "LAND SRVY I", "LAND SRVY II", "OA IV", "PAINT HELP", 
+    "PAINT I", "PRJT MGR II", "PUR TECH I", "S PAINT HELP", "S PAINT I", "TRK DR LBR", 
+    "TSMO II", "TSMS", "WELD I"
+];
+
+const fromList = [
+    "CLIFFORD A. CORPUZ, ENGR VI",
+    "JENNIFER MOSES-KALINGO, BSS II",
+    "KASON H. PACHECO, ENGR VI",
+    "KENTZIE K. MOSLEY, ENGR VI",
+    "NATHAN L. ORTEGA, BMS II",
+    "WENDELL A. VINCENT, CMS VI"
+];
+
+const submitterList = [
+    "CLIFFORD A. CORPUZ, ENGR VI",
+    "FRANCIS M. PEREZ, ENGR V",
+    "JENNIFER MOSES-KALINGO, BSS II",
+    "KASON H. PACHECO, ENGR VI",
+    "KENTZIE K. MOSLEY, ENGR VI",
+    "NATHAN L. ORTEGA, BMS II",
+    "WENDELL A. VINCENT, CMS VI"
+];
+
+const approverList = [
+    "CLIFFORD A. CORPUZ, ACTING DISTRICT ENGR",
+    "KENTZIE K. MOSLEY, ACTING DISTRICT ENGR"
+];
+
+function formatDateDisplay(dateStr) {
+    if (!dateStr) return "";
+    let parts = dateStr.split("-");
+    if (parts.length === 3) {
+        return `${Number(parts[1])}/${Number(parts[2])}/${parts[0].slice(-2)}`;
+    }
+    return dateStr;
+}
+
+// Print-only time formatting: remove the leading zero from the hour.
+function formatTimeDisplay(timeStr) {
+    if (!timeStr) return "";
+    return timeStr.replace(/\b0(\d):/g, "$1:");
+}
+
+function formatMemoDateDisplay(dateStr) {
+    if (!dateStr) return "";
+    const parts = dateStr.split("-").map(Number);
+    if (parts.length === 3 && parts.every(Number.isFinite)) {
+        const [year, month, day] = parts;
+        const date = new Date(year, month - 1, day);
+        if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
+            return date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+        }
+    }
+    return dateStr;
+}
+
+function generateEmployeeOptions(selectedValue) {
+    let html = '<option value="">-- Select --</option>';
+    employeeList.forEach(name => {
+        let selected = (selectedValue === name) ? 'selected' : '';
+        html += `<option value="${name}" ${selected}>${name}</option>`;
+    });
+    return html;
+}
+
+function generatePositionOptions(selectedValue) {
+    let html = '<option value="">-- Select --</option>';
+    positionList.forEach(pos => {
+        let selected = (selectedValue === pos) ? 'selected' : '';
+        html += `<option value="${pos}" ${selected}>${pos}</option>`;
+    });
+    return html;
+}
+
+function generateFromOptions(selectedValue) {
+    let html = '';
+    fromList.forEach(sub => {
+        let selected = (selectedValue === sub) ? 'selected' : '';
+        html += `<option value="${sub}" ${selected}>${sub}</option>`;
+    });
+    return html;
+}
+
+function generateSubmitterOptions(selectedValue) {
+    let html = '<option value="">-- Select --</option>';
+    submitterList.forEach(sub => {
+        let selected = (selectedValue === sub) ? 'selected' : '';
+        html += `<option value="${sub}" ${selected}>${sub}</option>`;
+    });
+    return html;
+}
+
+function generateApproverOptions(selectedValue) {
+    let html = '<option value="">-- Select --</option>';
+    approverList.forEach(app => {
+        let selected = (selectedValue === app) ? 'selected' : '';
+        html += `<option value="${app}" ${selected}>${app}</option>`;
+    });
+    return html;
+}
+
+let overtimeData = Array(12).fill(null).map(() => ({
+    name: "",
+    position: "",
+    startTime: "",
+    endTime: "",
+    time: "",
+    hours: "",
+    date: "",
+    type: ""
+}));
+
+function getTodayISODate() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+}
+
+let formData = {
+    to: "CLIFFORD A. CORPUZ, ACTING HWY-H",
+    date: getTodayISODate(),
+    from: "CLIFFORD A. CORPUZ, ENGR VI",
+    subject: "REQUEST APPROVAL FOR UNPLANNED/EMERGENCY OVERTIME AND\nOVERTIME COMPLETION REPORT",
+    ctrl: "",
+    ccfc: "",
+    ccfcRows: [""],
+    reason: "",
+    completion: "",
+    subBy: "",
+    appBy: ""
+};
+
+function parseTimeToMinutes(timeStr) {
+    if (!timeStr) return null;
+    let match = timeStr.match(/^(\d{2}):(\d{2})(am|pm)$/i);
+    if (!match) return null;
+    let h = parseInt(match[1], 10);
+    let m = parseInt(match[2], 10);
+    let ampm = match[3].toLowerCase();
+    if (ampm === 'pm' && h < 12) h += 12;
+    if (ampm === 'am' && h === 12) h = 0;
+    return h * 60 + m;
+}
+
+function calculateHours(startTime, endTime) {
+    let startMin = parseTimeToMinutes(startTime);
+    let endMin = parseTimeToMinutes(endTime);
+    if (startMin === null || endMin === null) return "";
+    let diffMin = endMin - startMin;
+    if (diffMin < 0) diffMin += 24 * 60;
+    let hours = diffMin / 60;
+    return hours.toFixed(2);
+}
+
+function generateTimeOptions(selectedValue) {
+    let html = '<option value="">--:--</option>';
+    for (let h = 0; h < 24; h++) {
+        for (let m = 0; m < 60; m += 15) {
+            let hour12 = h % 12 === 0 ? 12 : h % 12;
+            let minStr = m < 10 ? '0' + m : m;
+            let ampm = h < 12 ? 'am' : 'pm';
+            let hourStr = hour12 < 10 ? '0' + hour12 : hour12;
+            let timeVal = `${hourStr}:${minStr}${ampm}`;
+            let selected = (selectedValue === timeVal) ? 'selected' : '';
+            html += `<option value="${timeVal}" ${selected}>${timeVal}</option>`;
+        }
+    }
+    return html;
+}
+
+function updateRow(index, field, value) {
+    overtimeData[index][field] = value;
+    if (index === 0 && (field === 'name' || field === 'position')) {
+        for (let i = 1; i < overtimeData.length; i++) {
+            let hasData = overtimeData[i].name || overtimeData[i].position || overtimeData[i].startTime || overtimeData[i].endTime || overtimeData[i].date || overtimeData[i].type;
+            if (hasData) {
+                if (field === 'name') overtimeData[i].name = value;
+                if (field === 'position') overtimeData[i].position = value;
+            }
+        }
+    } else if (index > 0) {
+        let hasData = overtimeData[index].name || overtimeData[index].position || overtimeData[index].startTime || overtimeData[index].endTime || overtimeData[index].date || overtimeData[index].type;
+        if (hasData) {
+            if (!overtimeData[index].name) overtimeData[index].name = overtimeData[0].name;
+            if (!overtimeData[index].position) overtimeData[index].position = overtimeData[0].position;
+        } else {
+            overtimeData[index].name = "";
+            overtimeData[index].position = "";
+        }
+    }
+    if (field === 'date' || field === 'position' || field === 'type' || field === 'name' || field === 'startTime' || field === 'endTime') {
+        renderScreenView();
+    }
+}
+
+function updateTimeRow(index, part, value) {
+    if (part === 'start') {
+        overtimeData[index].startTime = value;
+    } else {
+        overtimeData[index].endTime = value;
+    }
+    let st = overtimeData[index].startTime;
+    let et = overtimeData[index].endTime;
+    if (st && et) {
+        overtimeData[index].time = `${st} - ${et}`;
+        overtimeData[index].hours = calculateHours(st, et);
+    } else {
+        overtimeData[index].time = "";
+        overtimeData[index].hours = "";
+    }
+    if (index > 0) {
+        let hasData = overtimeData[index].name || overtimeData[index].position || overtimeData[index].startTime || overtimeData[index].endTime || overtimeData[index].date || overtimeData[index].type;
+        if (hasData) {
+            if (!overtimeData[index].name) overtimeData[index].name = overtimeData[0].name;
+            if (!overtimeData[index].position) overtimeData[index].position = overtimeData[0].position;
+        } else {
+            overtimeData[index].name = "";
+            overtimeData[index].position = "";
+        }
+    }
+    renderScreenView();
+}
+
+function truncateCCFC(value) {
+    return String(value ?? "").slice(0, 16);
+}
+
+// Screen/data-entry values are kept in full. Truncation is print-only.
+function getFullCCFC(value) {
+    return String(value ?? "");
+}
+
+function getCCFCRows() {
+    if (Array.isArray(formData.ccfcRows) && formData.ccfcRows.length) {
+        return formData.ccfcRows.map(getFullCCFC);
+    }
+    return [getFullCCFC(formData.ccfc || "")];
+}
+
+function updateField(field, value) {
+    formData[field] = value;
+    if (field === "ccfc") {
+        if (!Array.isArray(formData.ccfcRows) || !formData.ccfcRows.length) formData.ccfcRows = [""];
+        formData.ccfcRows[0] = getFullCCFC(value);
+    }
+}
+
+function updateCCFCRow(index, value) {
+    if (!Array.isArray(formData.ccfcRows)) formData.ccfcRows = [getFullCCFC(formData.ccfc || "")];
+    formData.ccfcRows[index] = getFullCCFC(value);
+    if (index === 0) formData.ccfc = formData.ccfcRows[0];
+}
+
+function addCCFCRow() {
+    syncScreenInputsToState();
+    if (!Array.isArray(formData.ccfcRows)) formData.ccfcRows = [getFullCCFC(formData.ccfc || "")];
+    if (formData.ccfcRows.length >= 3) return;
+    formData.ccfcRows.push("");
+    renderScreenView();
+}
+
+function removeCCFCRow(index) {
+    syncScreenInputsToState();
+    if (!Array.isArray(formData.ccfcRows)) formData.ccfcRows = [getFullCCFC(formData.ccfc || "")];
+    if (formData.ccfcRows.length <= 1) return;
+    formData.ccfcRows.splice(index, 1);
+    formData.ccfc = formData.ccfcRows[0] || "";
+    renderScreenView();
+}
+
+function addRow() {
+    syncScreenInputsToState();
+    overtimeData.push({
+        name: "",
+        position: "",
+        startTime: "",
+        endTime: "",
+        time: "",
+        hours: "",
+        date: "",
+        type: ""
+    });
+    renderScreenView();
+}
+
+function removeEntry(index) {
+    syncScreenInputsToState();
+    overtimeData.splice(index, 1);
+    if (overtimeData.length === 0) {
+        overtimeData.push({
+            name: "",
+            position: "",
+            startTime: "",
+            endTime: "",
+            time: "",
+            hours: "",
+            date: "",
+            type: ""
+        });
+    }
+    renderScreenView();
+}
+
+function resetEntries() {
+    if (confirm("Are you sure you want to clear all entries?")) {
+        overtimeData = Array(12).fill(null).map(() => ({
+            name: "",
+            position: "",
+            startTime: "",
+            endTime: "",
+            time: "",
+            hours: "",
+            date: "",
+            type: ""
+        }));
+        formData.date = getTodayISODate();
+        formData.reason = "";
+        formData.completion = "";
+        formData.ctrl = "";
+        formData.ccfc = "";
+        formData.ccfcRows = [""];
+        formData.subBy = "";
+        formData.appBy = "";
+        renderScreenView();
+    }
+}
+
+function syncScreenInputsToState() {
+    document.querySelectorAll("#screen-view .employee-table tbody tr").forEach((tr, idx) => {
+        if (overtimeData[idx]) {
+            const nameSelect = tr.querySelector(".select-name");
+            const posSelect = tr.querySelector(".select-position");
+            const startSelect = tr.querySelector(".select-start");
+            const endSelect = tr.querySelector(".select-end");
+            const dateInput = tr.querySelector(".input-date");
+            const typeSelect = tr.querySelector(".select-type");
+
+            if (idx === 0) {
+                if (nameSelect) overtimeData[idx].name = nameSelect.value;
+                if (posSelect) overtimeData[idx].position = posSelect.value;
+            }
+            if (startSelect) overtimeData[idx].startTime = startSelect.value;
+            if (endSelect) overtimeData[idx].endTime = endSelect.value;
+            
+            if (startSelect && endSelect && startSelect.value && endSelect.value) {
+                overtimeData[idx].time = `${startSelect.value} - ${endSelect.value}`;
+                overtimeData[idx].hours = calculateHours(startSelect.value, endSelect.value);
+            } else {
+                overtimeData[idx].hours = "";
+            }
+
+            if (dateInput) overtimeData[idx].date = dateInput.value;
+            if (typeSelect) overtimeData[idx].type = typeSelect.value;
+
+            if (idx > 0) {
+                let hasData = overtimeData[idx].name || overtimeData[idx].position || overtimeData[idx].startTime || overtimeData[idx].endTime || overtimeData[idx].date || overtimeData[idx].type;
+                if (hasData) {
+                    if (!overtimeData[idx].name) overtimeData[idx].name = overtimeData[0].name;
+                    if (!overtimeData[idx].position) overtimeData[idx].position = overtimeData[0].position;
+                } else {
+                    overtimeData[idx].name = "";
+                    overtimeData[idx].position = "";
+                }
+            }
+        }
+    });
+
+    const toInput = document.getElementById("screen-to");
+    if (toInput) formData.to = toInput.value;
+    const dateInput = document.getElementById("screen-date");
+    if (dateInput) formData.date = dateInput.value;
+    const fromInput = document.getElementById("screen-from");
+    if (fromInput) formData.from = fromInput.value;
+    const subjInput = document.getElementById("screen-subject");
+    if (subjInput) formData.subject = subjInput.value;
+    const ctrlInput = document.getElementById("screen-ctrl");
+    if (ctrlInput) formData.ctrl = ctrlInput.value;
+    const ccfcInputs = document.querySelectorAll("#screen-view .screen-ccfc-row");
+    if (ccfcInputs.length) {
+        formData.ccfcRows = Array.from(ccfcInputs).map(input => getFullCCFC(input.value));
+        formData.ccfc = formData.ccfcRows[0] || "";
+    } else {
+        const ccfcInput = document.getElementById("screen-ccfc");
+        if (ccfcInput) {
+            formData.ccfc = getFullCCFC(ccfcInput.value);
+            formData.ccfcRows = [formData.ccfc];
+        }
+    }
+    const reasonInput = document.getElementById("screen-reason");
+    if (reasonInput) formData.reason = reasonInput.value;
+    const compInput = document.getElementById("screen-completion");
+    if (compInput) formData.completion = compInput.value;
+    const subByInput = document.getElementById("screen-subBy");
+    if (subByInput) formData.subBy = subByInput.value;
+    const appByInput = document.getElementById("screen-appBy");
+    if (appByInput) formData.appBy = appByInput.value;
+}
+
+function getRowIndices() {
+    let seenDates = new Set();
+    let currentIdx = 1;
+    return overtimeData.map(row => {
+        let d = row.date ? row.date.trim() : "";
+        if (!d) return "";
+        if (!seenDates.has(d)) {
+            seenDates.add(d);
+            return currentIdx++;
+        } else {
+            return "";
+        }
+    });
+}
+
+function renderScreenView() {
+    const container = document.getElementById("screen-view");
+    const rowIndices = getRowIndices();
+    
+    let totalHours = overtimeData.reduce((sum, row) => {
+        let h = parseFloat(row.hours);
+        return sum + (isNaN(h) ? 0 : h);
+    }, 0);
+    let totalHoursStr = totalHours ? totalHours.toFixed(2) : "";
+
+    const rowsHtml = overtimeData.map((row, globalIdx) => {
+        const displayNum = rowIndices[globalIdx];
+        let nameCellHtml = "";
+        let positionCellHtml = "";
+
+        if (globalIdx === 0) {
+            nameCellHtml = `
+                <select class="select-name" onchange="updateRow(0, 'name', this.value)">
+                    ${generateEmployeeOptions(row.name)}
+                </select>
+            `;
+            positionCellHtml = `
+                <select class="select-position" onchange="updateRow(0, 'position', this.value)">
+                    ${generatePositionOptions(row.position)}
+                </select>
+            `;
+        } else {
+            let hasData = row.name || row.startTime || row.endTime || row.date || row.type;
+            let displayName = hasData ? overtimeData[0].name : "";
+            let displayPosition = hasData ? overtimeData[0].position : "";
+            nameCellHtml = `<span style="display:inline-block; width:100%;">${escapeHtml(displayName)}</span>`;
+            positionCellHtml = `<span style="display:inline-block; width:100%;">${escapeHtml(displayPosition)}</span>`;
+        }
+
+        return `
+            <tr>
+                <td class="action-cell"><button type="button" class="remove-btn" onclick="removeEntry(${globalIdx})">×</button></td>
+                <td class="num">${displayNum}</td>
+                <td>${nameCellHtml}</td>
+                <td>${positionCellHtml}</td>
+                <td>
+                    <div class="time-cell-container">
+                        <select class="select-start" onchange="updateTimeRow(${globalIdx}, 'start', this.value)">
+                            ${generateTimeOptions(row.startTime)}
+                        </select>
+                        <span>-</span>
+                        <select class="select-end" onchange="updateTimeRow(${globalIdx}, 'end', this.value)">
+                            ${generateTimeOptions(row.endTime)}
+                        </select>
+                    </div>
+                </td>
+                <td class="hours"><span class="input-hours" style="display:inline-block; width:100%;">${escapeHtml(row.hours)}</span></td>
+                <td><input type="date" class="input-date" value="${escapeHtml(row.date)}" oninput="updateRow(${globalIdx}, 'date', this.value)"></td>
+                <td class="type">
+                    <select class="select-type" onchange="updateRow(${globalIdx}, 'type', this.value)">
+                        <option value="" ${!row.type ? "selected" : ""}></option>
+                        <option value="Cash" ${row.type === "Cash" ? "selected" : ""}>Cash</option>
+                        <option value="CTO" ${row.type === "CTO" ? "selected" : ""}>CTO</option>
+                    </select>
+                </td>
+            </tr>
+        `;
+    }).join("");
+
+    container.innerHTML = `
+        <div class="header">
+            STATE OF HAWAII<br>
+            DEPARTMENT OF TRANSPORTATION<br>
+            MEMORANDUM
+        </div>
+
+        <div class="memo">
+            <div class="memo-row to">
+                <div class="memo-label">TO:</div>
+                <div class="memo-value">
+                    <select id="screen-to" class="clean-input" onchange="updateField('to', this.value)" style="appearance: auto;">
+                        <option value="CLIFFORD A. CORPUZ, ACTING HWY-H" ${formData.to === "CLIFFORD A. CORPUZ, ACTING HWY-H" ? "selected" : ""}>CLIFFORD A. CORPUZ, ACTING HWY-H</option>
+                        <option value="KENTZIE K. MOSLEY, ACTING HWY-H" ${formData.to === "KENTZIE K. MOSLEY, ACTING HWY-H" ? "selected" : ""}>KENTZIE K. MOSLEY, ACTING HWY-H</option>
+                    </select>
+                </div>
+                <div></div>
+                <div class="memo-label">DATE:</div>
+                <div class="memo-value">
+                    <input id="screen-date" class="date-input" type="date" value="${escapeHtml(formData.date)}" oninput="updateField('date', this.value)">
+                </div>
+            </div>
+
+            <div class="memo-row from">
+                <div class="memo-label">FROM:</div>
+                <div class="memo-value">
+                    <select id="screen-from" class="clean-input" onchange="updateField('from', this.value)" style="appearance: auto;">
+                        ${generateFromOptions(formData.from)}
+                    </select>
+                </div>
+                <div></div>
+                <div></div>
+                <div></div>
+            </div>
+
+            <div class="memo-row subject">
+                <div class="memo-label">SUBJECT:</div>
+                <div class="memo-value">
+                    <textarea id="screen-subject" class="subject-text" oninput="updateField('subject', this.value)">${escapeHtml(formData.subject)}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="request-line">
+            <div class="request-label">Emergency overtime was requested as follows:</div>
+            <div class="control-box">
+                <strong>CTRL#</strong>
+                <input id="screen-ctrl" class="underlined-input" type="text" value="${escapeHtml(formData.ctrl)}" oninput="updateField('ctrl', this.value)">
+            </div>
+            <div class="ccfc-box screen-ccfc-box">
+                <strong>CC/FC#</strong>
+                <div class="ccfc-entry-list">
+                    ${getCCFCRows().map((value, i) => `
+                        <div class="ccfc-entry-row">
+                            <input id="screen-ccfc-${i}" class="underlined-input screen-ccfc-row" type="text" value="${escapeHtml(value)}" oninput="updateCCFCRow(${i}, this.value)">
+                            ${i > 0 ? `<button type="button" class="ccfc-remove-btn" onclick="removeCCFCRow(${i})" title="Remove CC/FC# row">−</button>` : ""}
+                            ${i === getCCFCRows().length - 1 && getCCFCRows().length < 3 ? `<button type="button" class="ccfc-add-btn" onclick="addCCFCRow()" title="Add CC/FC# row">+</button>` : ""}
+                        </div>`).join("")}
+                </div>
+            </div>
+        </div>
+
+        <div class="employee-table-wrapper">
+            <table class="employee-table">
+                <colgroup>
+                    <col class="action"><col class="num"><col class="name"><col class="position"><col class="time"><col class="hours"><col class="date"><col class="type">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th class="action"></th>
+                        <th class="num">A.</th>
+                        <th><span class="heading">Employee Name</span></th>
+                        <th><span class="heading">Position Title</span></th>
+                        <th><span class="heading">Time</span></th>
+                        <th class="hours"><span class="heading">Hours</span></th>
+                        <th><span class="heading">Date</span></th>
+                        <th class="type"><span class="heading">CTO/Cash</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rowsHtml}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="add-entry-container">
+            <button class="btn-green" onclick="addRow()">+ Add Entry</button>
+        </div>
+
+        <div class="section section-b">
+            <span class="letter">B.</span>
+            <span class="section-title">TOTAL HOURS OF OVERTIME NEEDED</span>
+            <span class="total-line">${escapeHtml(totalHoursStr)}</span>
+            <span class="italic">(TOTAL hours)</span>
+        </div>
+
+        <div class="section section-c">
+            <div class="section-heading-grid">
+                <span class="letter">C.</span>
+                <div class="section-copy"><span class="section-title">REASONS FOR OVERTIME</span> <span class="section-detail">(include specific work to be accomplished, also reasons why unable to accomplish work during working hours, and why overtime of not more than 10 hours per employee is required).</span></div>
+            </div>
+            <textarea id="screen-reason" class="reason-text" oninput="updateField('reason', this.value)">${escapeHtml(formData.reason)}</textarea>
+        </div>
+
+        <div class="section section-d">
+            <div class="section-heading-grid">
+                <span class="letter">D.</span>
+                <div class="section-copy"><span class="section-title">OVERTIME JOB COMPLETION REPORT</span> (Describe the amount of work completed. If applicable, explain why authorized work was not completed.)</div>
+            </div>
+            <textarea id="screen-completion" class="completion-text" oninput="updateField('completion', this.value)">${escapeHtml(formData.completion)}</textarea>
+        </div>
+
+        <div class="signatures">
+            <div class="sig-row">
+                <div class="sig-label">E.</div>
+                <div class="sig-caption">REQUEST SUBMITTED BY:</div>
+                <div></div>
+                <div class="sig-line-wrap">
+                    <span class="sig-line"></span>
+                    <span class="sig-name">
+                        <select id="screen-subBy" onchange="updateField('subBy', this.value)">
+                            ${generateSubmitterOptions(formData.subBy)}
+                        </select>
+                    </span>
+                </div>
+                <div></div>
+                <div class="sig-date-label">DATE:</div>
+                <div class="sig-date-line"></div>
+            </div>
+
+            <div class="sig-row">
+                <div class="sig-label">F.</div>
+                <div class="sig-caption">APPROVED:</div>
+                <div></div>
+                <div class="sig-line-wrap">
+                    <span class="sig-line"></span>
+                    <span class="sig-name">
+                        <select id="screen-appBy" onchange="updateField('appBy', this.value)">
+                            ${generateApproverOptions(formData.appBy)}
+                        </select>
+                    </span>
+                </div>
+                <div></div>
+                <div class="sig-date-label">DATE:</div>
+                <div class="sig-date-line"></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            Emergency Overtime<br>
+            Revised 8/26/26
+        </div>
+    `;
+}
+
+function triggerPrint() {
+    syncScreenInputsToState();
+    generatePrintView();
+
+    // Set the browser print/PDF suggested filename using the same
+    // employee and pay-period format as the CSV export.
+    // A short delay gives the browser time to register the updated title
+    // before the native Print/Save as PDF dialog opens.
+    const originalTitle = document.title;
+    const pdfFilename = getCSVFilename().replace(/\.csv$/i, ".pdf");
+    document.title = pdfFilename;
+
+    const titleElement = document.querySelector("title");
+    const originalTitleText = titleElement ? titleElement.textContent : "";
+    if (titleElement) titleElement.textContent = pdfFilename;
+
+    const restoreTitle = () => {
+        document.title = originalTitle;
+        if (titleElement) titleElement.textContent = originalTitleText;
+        window.removeEventListener("afterprint", restoreTitle);
+    };
+    window.addEventListener("afterprint", restoreTitle);
+
+    window.setTimeout(() => {
+        window.print();
+    }, 150);
+}
+
+function generatePrintView() {
+    const printContainer = document.getElementById("print-view");
+    printContainer.innerHTML = "";
+
+    const rowIndices = getRowIndices();
+
+    // PRINT LAYOUT ONLY:
+    // The official form repeats the complete memorandum on every page.
+    // Part A uses up to 12 overtime lines per page. Part A numbering continues
+    // across pages; Page 1 shows the overall hours plus each page subtotal,
+    // while later pages show their own page subtotal. The underlying data,
+    // calculations, and screen behavior are not changed here.
+    const blankRow = () => ({
+        name: "",
+        position: "",
+        startTime: "",
+        endTime: "",
+        time: "",
+        hours: "",
+        date: "",
+        type: ""
+    });
+
+    // Capture the Page 1 memorandum/signature values once so every printed page
+    // repeats the exact same TO, FROM, memo DATE, Part E, and Part F values.
+    const repeatedPrintValues = {
+        to: formData.to,
+        from: formData.from,
+        date: formData.date,
+        subBy: formData.subBy,
+        appBy: formData.appBy
+    };
+
+    const pages = [];
+    pages.push({
+        rows: overtimeData.slice(0, 12),
+        indices: rowIndices.slice(0, 12)
+    });
+
+    for (let i = 12; i < overtimeData.length; i += 12) {
+        pages.push({
+            rows: overtimeData.slice(i, i + 12),
+            indices: rowIndices.slice(i, i + 12)
+        });
+    }
+
+    function pageTotal(rows) {
+        return rows.reduce((sum, row) => {
+            const h = parseFloat(row.hours);
+            return sum + (isNaN(h) ? 0 : h);
+        }, 0);
+    }
+
+    // Print-friendly hour formatting: keep meaningful decimals, but do not
+    // force trailing zeroes (e.g. 60, 30.5, 25, 5).
+    function formatHoursTotal(value) {
+        if (!value) return "";
+        return Number(value.toFixed(2)).toString();
+    }
+
+    function makeRowsHtml(rows, indices, isFirstPage) {
+        const displayRows = rows.slice();
+        const displayIndices = indices.slice();
+
+        // Every printed page has exactly 12 physical Part A lines.
+        // Blank lines are added to later pages as needed so Parts B-F and
+        // the footer retain the same physical page layout regardless of
+        // how many Part A entries are populated on that page.
+        while (displayRows.length < 12) {
+            displayRows.push(blankRow());
+            displayIndices.push("");
+        }
+
+        return displayRows.map((row, idx) => {
+            const hasData = row.name || row.startTime || row.endTime || row.date || row.type;
+            const displayName = hasData ? row.name : "";
+            const displayPosition = hasData ? overtimeData[0].position : "";
+            const formattedDate = formatDateDisplay(row.date);
+
+            return `
+                <tr>
+                    <td class="num">${displayIndices[idx] || ""}</td>
+                    <td>${escapeHtml(displayName)}</td>
+                    <td>${escapeHtml(displayPosition)}</td>
+                    <td>${escapeHtml(formatTimeDisplay(row.time))}</td>
+                    <td class="hours">${escapeHtml(row.hours)}</td>
+                    <td>${escapeHtml(formattedDate)}</td>
+                    <td class="type">${escapeHtml(row.type)}</td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    function makePage(pageData, pageNum, isFirstPage) {
+        const page = document.createElement("div");
+        page.className = "print-page";
+
+        const body = document.createElement("div");
+        body.className = "print-body";
+
+        const rowsHtml = makeRowsHtml(pageData.rows, pageData.indices, isFirstPage);
+        const total = pageTotal(pageData.rows);
+        const overallTotal = pages.reduce((sum, p) => sum + pageTotal(p.rows), 0);
+        const pageTotals = pages.map(p => pageTotal(p.rows));
+        let totalHoursStr = formatHoursTotal(total);
+        let totalLineClass = "total-line";
+        let totalNote = "";
+
+        // When the report spans multiple pages, each non-final page shows
+        // that page's subtotal and identifies the page containing the final
+        // overall total. The final page shows the overall total.
+        if (pages.length > 1) {
+            if (pageNum < pages.length) {
+                totalHoursStr = formatHoursTotal(total);
+                totalNote = `(Page ${pageNum} of ${pages.length} - total hours on page ${pages.length})`;
+            } else {
+                totalHoursStr = formatHoursTotal(overallTotal);
+                const pageList = pages.length === 2
+                    ? "pages 1 and 2"
+                    : `${Array.from({length: pages.length - 1}, (_, i) => i + 1).join(", ")}, and ${pages.length}`;
+                totalNote = `(TOTAL hours from ${pageList})`;
+            }
+        } else {
+            totalNote = "(TOTAL hours)";
+        }
+
+        body.innerHTML = `
+            <div class="header">
+                <span class="header-line-expanded">STATE OF HAWAII</span><br>
+                <span class="header-line-expanded">DEPARTMENT OF TRANSPORTATION</span><br>
+                <span>MEMORANDUM</span>
+            </div>
+
+            <div class="memo">
+                <div class="memo-row to">
+                    <div class="memo-label">TO:</div>
+                    <div class="memo-value">${escapeHtml(repeatedPrintValues.to)}</div>
+                    <div></div>
+                    <div class="memo-label">DATE:</div>
+                    <div class="memo-value">
+                        <span style="display:inline-block;">${escapeHtml(formatMemoDateDisplay(repeatedPrintValues.date))}</span>
+                    </div>
+                </div>
+
+                <div class="memo-row from">
+                    <div class="memo-label">FROM:</div>
+                    <div class="memo-value">${escapeHtml(repeatedPrintValues.from)}</div>
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                </div>
+
+                <div class="memo-row subject">
+                    <div class="memo-label">SUBJECT:</div>
+                    <div class="memo-value"><div style="white-space: pre-wrap; line-height: 1.08;">${escapeHtml(formData.subject)}</div></div>
+                </div>
+            </div>
+
+            <div class="request-line">
+                <div class="request-label">Emergency overtime was requested as follows:</div>
+                <div class="control-box">
+                    <strong>CTRL#</strong>
+                    <span class="underlined-input" style="display:inline-block; min-width:.70in;">${escapeHtml(formData.ctrl)}</span>
+                </div>
+                <div class="ccfc-box print-ccfc-box">
+                    <strong>CC/FC#</strong>
+                    <div class="print-ccfc-stack">
+                        ${getCCFCRows().slice(0, 3).map(value => `<span class="underlined-input print-ccfc-value">${escapeHtml(truncateCCFC(value))}</span>`).join("")}
+                    </div>
+                </div>
+            </div>
+
+            <div class="employee-table-wrapper">
+                <table class="employee-table">
+                    <colgroup>
+                        <col class="num"><col class="name"><col class="position"><col class="time"><col class="hours"><col class="date"><col class="type">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th class="num">A.</th>
+                            <th><span class="heading">Employee Name</span></th>
+                            <th><span class="heading">Position Title</span></th>
+                            <th><span class="heading">Time</span></th>
+                            <th class="hours"><span class="heading">Hours</span></th>
+                            <th><span class="heading">Date</span></th>
+                            <th class="type"><span class="heading">CTO/Cash</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="section section-b">
+                <span class="letter">B.</span>
+                <span class="section-title">TOTAL HOURS OF OVERTIME NEEDED</span>
+                <span class="${totalLineClass}">${escapeHtml(totalHoursStr)}</span>
+                <span class="b-note">${escapeHtml(totalNote)}</span>
+            </div>
+
+            <div class="section section-c">
+                <div class="section-heading-grid">
+                    <span class="letter">C.</span>
+                    <div class="section-copy"><span class="section-title">REASONS FOR OVERTIME</span> <span class="section-detail">(include specific work to be accomplished, also reasons why unable to accomplish work<br>during working hours, and why overtime work of not more than 10 hours per employee is required).</span></div>
+                </div>
+                <div class="print-response-text">${escapeHtml(formData.reason)}</div>
+            </div>
+
+            <div class="section section-d">
+                <div class="section-heading-grid">
+                    <span class="letter">D.</span>
+                    <div class="section-copy"><span class="section-title">OVERTIME JOB COMPLETION REPORT</span> <span class="section-detail">(Describe the amount of work completed. If applicable, explain why<br>authorized work was not completed.)</span></div>
+                </div>
+                <div class="print-response-text completion-response">${escapeHtml(formData.completion)}</div>
+            </div>
+
+            <div class="signatures">
+                <div class="sig-row">
+                    <div class="sig-label">E.</div>
+                    <div class="sig-caption">REQUEST SUBMITTED BY:</div>
+                    <div></div>
+                    <div class="sig-line-wrap">
+                        <span class="sig-line"></span>
+                        <span class="sig-name">${escapeHtml(repeatedPrintValues.subBy)}</span>
+                    </div>
+                    <div></div>
+                    <div class="sig-date-label">DATE:</div>
+                    <div class="sig-date-line"><span class="sig-date-value"></span></div>
+                </div>
+
+                <div class="sig-row">
+                    <div class="sig-label">F.</div>
+                    <div class="sig-caption">APPROVED:</div>
+                    <div></div>
+                    <div class="sig-line-wrap">
+                        <span class="sig-line"></span>
+                        <span class="sig-name">${escapeHtml(repeatedPrintValues.appBy)}</span>
+                    </div>
+                    <div></div>
+                    <div class="sig-date-label">DATE:</div>
+                    <div class="sig-date-line"><span class="sig-date-value"></span></div>
+                </div>
+            </div>
+        `;
+
+        page.appendChild(body);
+
+        const footer = document.createElement("div");
+        footer.className = "footer";
+        footer.innerHTML = `Emergency Overtime<br>Revised 8/26/26`;
+        page.appendChild(footer);
+
+        printContainer.appendChild(page);
+    }
+
+    pages.forEach((pageData, index) => {
+        makePage(pageData, index + 1, index === 0);
+    });
+}
+
+function csvEscape(value) {
+    const text = value == null ? "" : String(value);
+    return '"' + text.replace(/"/g, '""').replace(/\r?\n/g, " ") + '"';
+}
+
+function getCSVFilename() {
+    // Use the employee name from the first OT entry.
+    const employeeName = (overtimeData[0]?.name || "EMPLOYEE").trim().toUpperCase();
+
+    // Determine the pay-period month/year from the latest OT entry date.
+    const validDates = overtimeData
+        .map(row => (row.date || "").trim())
+        .filter(date => /^\d{4}-\d{2}-\d{2}$/.test(date))
+        .sort();
+
+    if (validDates.length === 0) {
+        return `${employeeName} - EMERGENCY OT REPORT.csv`;
+    }
+
+    const latestDate = validDates[validDates.length - 1];
+    const [year, month, day] = latestDate.split("-").map(Number);
+
+    // Pay periods are the 1st–15th and the 16th–last day of the month.
+    const lastDayOfMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    const payPeriodEnd = day <= 15 ? 15 : lastDayOfMonth;
+    const shortYear = String(year).slice(-2);
+
+    return `${employeeName} - EMERGENCY OT REPORT PPE ${month}-${payPeriodEnd}-${shortYear}.csv`;
+}
+
+function exportToCSV() {
+    syncScreenInputsToState();
+
+    const lines = [];
+    lines.push(["Field", "Value"].map(csvEscape).join(","));
+    lines.push(["To", formData.to].map(csvEscape).join(","));
+    lines.push(["Date", formData.date].map(csvEscape).join(","));
+    lines.push(["From", formData.from].map(csvEscape).join(","));
+    lines.push(["Ctrl", formData.ctrl].map(csvEscape).join(","));
+    syncScreenInputsToState();
+    lines.push(["CCFC", getCCFCRows().filter(v => v).join(" | ")].map(csvEscape).join(","));
+    lines.push(["Reason", formData.reason].map(csvEscape).join(","));
+    lines.push(["Completion", formData.completion].map(csvEscape).join(","));
+    lines.push(["SubBy", formData.subBy].map(csvEscape).join(","));
+    lines.push(["AppBy", formData.appBy].map(csvEscape).join(","));
+    lines.push("");
+    lines.push(["Index", "Name", "Position", "StartTime", "EndTime", "Date", "Type"].map(csvEscape).join(","));
+
+    overtimeData.forEach((row, i) => {
+        lines.push([
+            i + 1,
+            row.name,
+            row.position,
+            row.startTime,
+            row.endTime,
+            row.date,
+            row.type
+        ].map(csvEscape).join(","));
+    });
+
+    // Create an actual CSV file, not an HTML/data document.
+    const csvBlob = new Blob(["\uFEFF" + lines.join("\r\n") + "\r\n"], {
+        type: "text/csv;charset=utf-8;"
+    });
+    const csvUrl = URL.createObjectURL(csvBlob);
+    const link = document.createElement("a");
+    link.href = csvUrl;
+    link.download = getCSVFilename();
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(csvUrl), 1000);
+}
+
+function triggerCSVImport(event) {
+    const input = event.target;
+    const file = input && input.files ? input.files[0] : null;
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const text = String(e.target.result || "");
+            const result = parseCSVData(text);
+            renderScreenView();
+
+            if (result.rowsLoaded > 0 || result.fieldsLoaded > 0) {
+                alert(`CSV loaded successfully! ${result.rowsLoaded} overtime entr${result.rowsLoaded === 1 ? "y" : "ies"} loaded.`);
+            } else {
+                alert("The CSV file could not be recognized. Please select a file created by Save Entries.");
+            }
+        } catch (error) {
+            console.error("CSV import error:", error);
+            alert("Unable to load this CSV file. Please verify that it is a valid CSV file created by Save Entries.");
+        } finally {
+            // Allow the same file to be selected again on the next import.
+            input.value = "";
+        }
+    };
+    reader.onerror = function() {
+        alert("Unable to read the selected CSV file.");
+        input.value = "";
+    };
+    reader.readAsText(file);
+}
+
+function parseCSVLine(line) {
+    const values = [];
+    let value = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+            if (inQuotes && line[i + 1] === '"') {
+                value += '"';
+                i++;
+            } else {
+                inQuotes = !inQuotes;
+            }
+        } else if (ch === ',' && !inQuotes) {
+            values.push(value);
+            value = "";
+        } else {
+            value += ch;
+        }
+    }
+    values.push(value);
+    return values;
+}
+
+function parseCSVData(text) {
+    const cleanText = String(text || "").replace(/^\uFEFF/, "");
+    const lines = cleanText.split(/\r\n|\n|\r/);
+    let isTableSection = false;
+    let newRows = [];
+    let fieldsLoaded = 0;
+
+    lines.forEach(line => {
+        if (!line.trim()) return;
+
+        const cols = parseCSVLine(line).map(value => value.trim());
+        const firstValue = (cols[0] || "").replace(/^\uFEFF/, "").toLowerCase();
+        const secondValue = (cols[1] || "").toLowerCase();
+
+        // Recognize the current CSV header and older compatible headers.
+        if (firstValue === "index" && secondValue === "name") {
+            isTableSection = true;
+            return;
+        }
+
+        if (!isTableSection) {
+            if (cols.length >= 2) {
+                const fieldName = cols[0].replace(/^\uFEFF/, "").trim().toLowerCase();
+                const fieldValue = cols.slice(1).join(",");
+                const fieldMap = {
+                    "to": "to",
+                    "date": "date",
+                    "from": "from",
+                    "ctrl": "ctrl",
+                    "ccfc": "ccfc",
+                    "reason": "reason",
+                    "completion": "completion",
+                    "subby": "subBy",
+                    "appby": "appBy"
+                };
+
+                if (fieldMap[fieldName]) {
+                    if (fieldMap[fieldName] === "ccfc") {
+                        const importedCCFC = fieldValue.split(/\s*\|\s*/).map(getFullCCFC).filter(Boolean).slice(0, 3);
+                        formData.ccfcRows = importedCCFC.length ? importedCCFC : [""];
+                        formData.ccfc = formData.ccfcRows[0] || "";
+                    } else {
+                        formData[fieldMap[fieldName]] = fieldValue;
+                    }
+                    fieldsLoaded++;
+                }
+            }
+            return;
+        }
+
+        // Accept both the current format (StartTime/EndTime) and the older
+        // format where time was stored as one value and hours was separate.
+        if (cols.length >= 7 && /^\d+$/.test(cols[0])) {
+            const name = cols[1] || "";
+            const position = cols[2] || "";
+            let startTime = cols[3] || "";
+            let endTime = cols[4] || "";
+            let date = cols[5] || "";
+            let type = cols[6] || "";
+
+            // Older files may contain: Index,Name,Position,Time,Hours,Date,CTO/Cash
+            // In that format, split the combined time value into start/end.
+            if (startTime.includes(" - ") && !parseTimeToMinutes(startTime)) {
+                const timeParts = startTime.split(/\s+-\s+/);
+                startTime = timeParts[0] || "";
+                endTime = timeParts[1] || "";
+            }
+
+            // If the current format is used, cols[3] and cols[4] are separate times.
+            // If an older format has a blank end-time column, try the combined value.
+            if (!endTime && startTime.includes(" - ")) {
+                const timeParts = startTime.split(/\s+-\s+/);
+                startTime = timeParts[0] || "";
+                endTime = timeParts[1] || "";
+            }
+
+            let calculatedHours = "";
+            if (startTime && endTime) {
+                calculatedHours = calculateHours(startTime, endTime);
+            }
+
+            newRows.push({
+                name,
+                position,
+                startTime,
+                endTime,
+                time: (startTime && endTime) ? `${startTime} - ${endTime}` : "",
+                hours: calculatedHours,
+                date,
+                type
+            });
+        }
+    });
+
+    if (newRows.length > 0) {
+        overtimeData = newRows;
+    }
+
+    return { rowsLoaded: newRows.length, fieldsLoaded };
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+// ---------- EOT DATA-file save/open support ----------
+function eotStateObject() {
+    syncScreenInputsToState();
+    return { version: 2, savedAt: new Date().toISOString(), formData: JSON.parse(JSON.stringify(formData)), overtimeData: JSON.parse(JSON.stringify(overtimeData)) };
+}
+function buildEOTFilename() {
+    const employeeName=(overtimeData.find(r=>(r.name||"").trim())?.name||"EMPLOYEE").trim();
+    const parts=employeeName.split(",").map(x=>x.trim()).filter(Boolean);
+    const displayName=(parts.length>=2?`${parts[0]}, ${parts.slice(1).join(", ")}`:employeeName).toUpperCase();
+    const dates=overtimeData.map(r=>(r.date||"").trim()).filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+    if(!dates.length) return `${displayName} - EMERGENCY OT REPORT.eot`;
+    const [year,month,day]=dates[dates.length-1].split("-").map(Number);
+    const lastDay=new Date(Date.UTC(year,month,0)).getUTCDate(), ppe=day<=15?15:lastDay;
+    return `${displayName} - EMERGENCY OT REPORT PPE ${month}-${ppe}-${String(year).slice(-2)}.eot`;
+}
+function saveEOTFile() {
+    try {
+        const payload=eotStateObject();
+        const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json;charset=utf-8"});
+        const url=URL.createObjectURL(blob);
+        const link=document.createElement("a"); link.href=url; link.download=buildEOTFilename(); document.body.appendChild(link); link.click(); link.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),2000);
+    } catch(err){console.error("EOT save error:",err);alert("Unable to save the EOT file.");}
+}
+async function triggerEOTImport(event) {
+    const file=event.target.files?.[0]; event.target.value=""; if(!file)return;
+    try {
+        const payload=JSON.parse(await file.text());
+        if(payload.format==="EOT1") { alert("This is a password-protected EOT1 file. V91+ uses unprotected EOT files. Please open it with the older version that created it."); return; }
+        if(!payload || !payload.formData || !Array.isArray(payload.overtimeData)) throw new Error("Invalid EOT state");
+        formData=payload.formData; overtimeData=payload.overtimeData;
+        if(!Array.isArray(formData.ccfcRows)||!formData.ccfcRows.length) formData.ccfcRows=[getFullCCFC(formData.ccfc||"")];
+        renderScreenView(); alert("EOT report loaded successfully.");
+    } catch(err){console.error("EOT open error:",err);alert("Unable to open this EOT file. Make sure it was created by the unprotected version of Emergency OT Completion Report.");}
+}
+
+// ---------- XLSX Import / Export ----------
+function toggleImportExportMenu(event) {
+    event.stopPropagation();
+    document.getElementById("importExportDropdown").classList.toggle("open");
+}
+document.addEventListener("click", function() {
+    const menu=document.getElementById("importExportDropdown"); if(menu) menu.classList.remove("open");
+});
+
+function buildXLSXFilename() {
+    const base=getCSVFilename().replace(/\.csv$/i,"");
+    return `${base}.xlsx`;
+}
+
+function normalizeXLSXDate(value) {
+    if(value==null || value==="") return "";
+    if(value instanceof Date && !isNaN(value)) return `${value.getFullYear()}-${String(value.getMonth()+1).padStart(2,"0")}-${String(value.getDate()).padStart(2,"0")}`;
+    if(typeof value==="number" && typeof XLSX!=="undefined" && XLSX.SSF) {
+        const d=XLSX.SSF.parse_date_code(value);
+        if(d) return `${d.y}-${String(d.m).padStart(2,"0")}-${String(d.d).padStart(2,"0")}`;
+    }
+    const s=String(value).trim();
+    if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    if(m){ let y=Number(m[3]); if(y<100)y+=2000; return `${y}-${String(Number(m[1])).padStart(2,"0")}-${String(Number(m[2])).padStart(2,"0")}`; }
+    return s;
+}
+
+function normalizeXLSXTime(value) {
+    if(value==null || value==="") return "";
+    if(value instanceof Date && !isNaN(value)) {
+        const h=value.getHours(), m=value.getMinutes(), ap=h<12?"am":"pm", h12=h%12||12;
+        return `${String(h12).padStart(2,"0")}:${String(m).padStart(2,"0")}${ap}`;
+    }
+    let s=String(value).trim();
+    if(/^\d{2}:\d{2}(am|pm)$/i.test(s)) return s.toLowerCase();
+    if(/^\d{1,2}:\d{2}\s*(AM|PM)$/i.test(s)){ const m=s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i); return `${String(Number(m[1])).padStart(2,"0")}:${m[2]}${m[3].toLowerCase()}`; }
+    if(typeof value==="number") { const mins=Math.round(value*24*60)%1440; const h=Math.floor(mins/60), m=mins%60, ap=h<12?"am":"pm", h12=h%12||12; return `${String(h12).padStart(2,"0")}:${String(m).padStart(2,"0")}${ap}`; }
+    return s.toLowerCase().replace(/\s+/g,"");
+}
+
+function xlsxLists() {
+    return {
+        employees: employeeList || [],
+        positions: positionList || [],
+        times: Array.from({length:96},(_,i)=>{const h=Math.floor(i/4),m=(i%4)*15,hh=h%12||12,ap=h<12?'AM':'PM';return `${String(hh).padStart(2,'0')}:${String(m).padStart(2,'0')}${ap}`;}),
+        types: ["Cash","CTO"],
+        to: ["CLIFFORD A. CORPUZ, ACTING HWY-H","KENTZIE K. MOSLEY, ACTING HWY-H"],
+        from: fromList || [],
+        submitters: submitterList || [],
+        approvers: approverList || []
+    };
+}
+
+function excelDateFromISO(iso) {
+    if(!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "";
+    const [y,m,d]=iso.split("-").map(Number);
+    return new Date(y,m-1,d);
+}
+
+async function exportToXLSX() {
+    if(typeof ExcelJS === "undefined") { alert("The Excel module is not available. Please open this app while connected to the internet."); return; }
+    try {
+        syncScreenInputsToState();
+        const wb=new ExcelJS.Workbook();
+        wb.creator="Emergency OT Completion Report";
+        wb.created=new Date();
+        const partA=wb.addWorksheet("Part A");
+        const info=wb.addWorksheet("Report Information");
+        const lists=wb.addWorksheet("Lists");
+        lists.state="veryHidden";
+
+        const L=xlsxLists();
+        const listDefs=[
+            ["Employees",L.employees],["Positions",L.positions],["Times",L.times],["Types",L.types],
+            ["TO",L.to],["From",L.from],["Submitters",L.submitters],["Approvers",L.approvers]
+        ];
+        listDefs.forEach((def,c)=>{ lists.getCell(1,c+1).value=def[0]; def[1].forEach((v,i)=>lists.getCell(i+2,c+1).value=v); });
+        const dateValues=[]; for(let y=2024;y<=2030;y++){for(let m=1;m<=12;m++){const last=new Date(y,m,0).getDate();for(let d=1;d<=last;d++)dateValues.push(new Date(y,m-1,d));}}
+        lists.getCell(1,9).value="Dates"; dateValues.forEach((v,i)=>{lists.getCell(i+2,9).value=v;lists.getCell(i+2,9).numFmt="m/d/yy";});
+
+        // Part A: only the actual overtime entry fields.
+        ["Employer Name","Position","Start Time","End Time","Date","CTO/Cash"].forEach((h,i)=>partA.getCell(1,i+1).value=h);
+        const headers=partA.getRow(1); headers.font={bold:true}; headers.alignment={horizontal:"center",vertical:"middle"}; headers.height=24;
+        const colWidths=[24,18,14,14,12,12]; colWidths.forEach((w,i)=>partA.getColumn(i+1).width=w);
+        const activeRows=overtimeData.filter(r=>r.name||r.position||r.startTime||r.endTime||r.date||r.type);
+        const count=Math.max(activeRows.length,20);
+        const formulaDateRange=`Lists!$I$2:$I$${dateValues.length+1}`;
+        const validations=[
+            [1,`Lists!$A$2:$A$${L.employees.length+1}`],[2,`Lists!$B$2:$B$${L.positions.length+1}`],
+            [3,`Lists!$C$2:$C$${L.times.length+1}`],[4,`Lists!$C$2:$C$${L.times.length+1}`],
+            [5,formulaDateRange],[6,`Lists!$D$2:$D$${L.types.length+1}`]
+        ];
+        for(let r=0;r<count;r++){
+            const row=activeRows[r]||{name:"",position:"",startTime:"",endTime:"",date:"",type:""};
+            const rr=r+2;
+            partA.getCell(rr,1).value=row.name||""; partA.getCell(rr,2).value=row.position||"";
+            partA.getCell(rr,3).value=row.startTime||""; partA.getCell(rr,4).value=row.endTime||"";
+            partA.getCell(rr,5).value=excelDateFromISO(row.date||""); partA.getCell(rr,5).numFmt="m/d/yy";
+            partA.getCell(rr,6).value=row.type||"";
+            validations.forEach(([c,f])=>partA.getCell(rr,c).dataValidation={type:"list",allowBlank:true,formulae:[`=${f}`]});
+        }
+        partA.views=[{state:"frozen",ySplit:1}];
+        partA.autoFilter={from:"A1",to:`G${count+1}`};
+
+        // Worksheet 2: all other fillable HTML fields.
+        info.getCell(1,1).value="Field"; info.getCell(1,2).value="Value";
+        info.getRow(1).font={bold:true}; info.getRow(1).alignment={horizontal:"center"};
+        info.getColumn(1).width=28; info.getColumn(2).width=80;
+        const infoRows=[
+            ["TO",formData.to||"",`Lists!$E$2:$E$${L.to.length+1}`],
+            ["Memo Date",excelDateFromISO(formData.date||""),formulaDateRange],
+            ["FROM",formData.from||"",`Lists!$F$2:$F$${L.from.length+1}`],
+            ["CTRL#",formData.ctrl||"",null],
+            ["CC/FC# 1",getFullCCFC(formData.ccfcRows?.[0] || formData.ccfc || ""),null],
+            ["CC/FC# 2",getFullCCFC(formData.ccfcRows?.[1] || ""),null],
+            ["CC/FC# 3",getFullCCFC(formData.ccfcRows?.[2] || ""),null],
+            ["Reason for Overtime",formData.reason||"",null],
+            ["Completion Report",formData.completion||"",null],
+            ["Submitted By",formData.subBy||"",`Lists!$G$2:$G$${L.submitters.length+1}`],
+            ["Approved By",formData.appBy||"",`Lists!$H$2:$H$${L.approvers.length+1}`]
+        ];
+        infoRows.forEach((x,i)=>{const rr=i+2;info.getCell(rr,1).value=x[0];info.getCell(rr,2).value=x[1];if(x[0]==="Memo Date")info.getCell(rr,2).numFmt="m/d/yy";if(x[2])info.getCell(rr,2).dataValidation={type:"list",allowBlank:true,formulae:[`=${x[2]}`]};});
+        info.views=[{state:"frozen",ySplit:1}];
+
+        const buffer=await wb.xlsx.writeBuffer();
+        const blob=new Blob([buffer],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+        const url=URL.createObjectURL(blob), link=document.createElement("a"); link.href=url; link.download=buildXLSXFilename(); document.body.appendChild(link); link.click(); link.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000);
+    } catch(err){console.error("XLSX export error:",err);alert("Unable to export the XLSX file.");}
+}
+
+function buildImportedRowsFromPartA(sheet) {
+    const rows=[];
+    sheet.eachRow((excelRow,rowNumber)=>{
+        if(rowNumber===1)return;
+        const get=c=>excelRow.getCell(c).value;
+        const name=get(1), position=get(2), start=normalizeXLSXTime(get(3)), end=normalizeXLSXTime(get(4)), date=normalizeXLSXDate(get(5)), type=get(6);
+        if(name||position||start||end||date||type){rows.push({name:String(name??""),position:String(position??""),startTime:start,endTime:end,time:(start&&end)?`${start} - ${end}`:"",hours:(start&&end)?calculateHours(start,end):"",date,type:String(type??"")});}
+    });
+    return rows;
+}
+
+function getInfoValue(info, label){
+    for(let r=2;r<=info.rowCount;r++) if(String(info.getCell(r,1).value??"").trim()===label) return info.getCell(r,2).value;
+    return "";
+}
+
+function importXLSXWithExcelJS(file,input){
+    if(typeof ExcelJS === "undefined"){alert("The Excel module is not available. Please open this app while connected to the internet.");return;}
+    file.arrayBuffer().then(async buffer=>{
+        try{
+            const wb=new ExcelJS.Workbook(); await wb.xlsx.load(buffer);
+            const partA=wb.getWorksheet("Part A") || wb.worksheets[0];
+            const info=wb.getWorksheet("Report Information") || wb.worksheets[1];
+            if(!partA) throw new Error("Missing Part A worksheet");
+            if(info){
+                formData.to=String(getInfoValue(info,"TO")??"");
+                formData.date=normalizeXLSXDate(getInfoValue(info,"Memo Date"));
+                formData.from=String(getInfoValue(info,"FROM")??"");
+                formData.ctrl=String(getInfoValue(info,"CTRL#")??"");
+                const cc1=String(getInfoValue(info,"CC/FC# 1")??"").trim();
+                const cc2=String(getInfoValue(info,"CC/FC# 2")??"").trim();
+                const cc3=String(getInfoValue(info,"CC/FC# 3")??"").trim();
+                formData.ccfcRows=[cc1,cc2,cc3].filter((v,i,a)=>v || i===0);
+                if(!formData.ccfcRows.length) formData.ccfcRows=[""];
+                if(formData.ccfcRows.length>3) formData.ccfcRows=formData.ccfcRows.slice(0,3);
+                formData.ccfc=formData.ccfcRows[0]||"";
+                formData.reason=String(getInfoValue(info,"Reason for Overtime")??"");
+                formData.completion=String(getInfoValue(info,"Completion Report")??"");
+                formData.subBy=String(getInfoValue(info,"Submitted By")??"");
+                formData.appBy=String(getInfoValue(info,"Approved By")??"");
+            }
+            const newRows=buildImportedRowsFromPartA(partA);
+            overtimeData=newRows.length?newRows:[{name:"",position:"",startTime:"",endTime:"",time:"",hours:"",date:"",type:""}];
+            renderScreenView();
+            alert(`XLSX loaded successfully! ${newRows.length} overtime entr${newRows.length===1?"y":"ies"} loaded.`);
+        }catch(err){console.error("XLSX import error:",err);alert("Unable to load this XLSX file. Please use the two-sheet XLSX format from this Emergency OT Completion Report. Part A does not contain an Hours column; Hours are calculated by the HTML form.");}
+        finally{if(input)input.value="";}
+    }).catch(err=>{console.error(err);alert("Unable to read the XLSX file.");if(input)input.value="";});
+}
+
+function triggerXLSXImport(event){
+    if(event){const file=event.target.files?.[0];if(file)importXLSXWithExcelJS(file,event.target);}
+    else{const input=document.getElementById("xlsxFileInput");input.value="";input.click();}
+}
+
+
+renderScreenView();
+
+function openHowToUse() {
+  const modal = document.getElementById('howToUseModal');
+  if (modal) { modal.style.display = 'flex'; }
+}
+function closeHowToUse() {
+  const modal = document.getElementById('howToUseModal');
+  if (modal) { modal.style.display = 'none'; }
+}
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape') closeHowToUse();
+});
+</script>
+
+
+<style>
+/* REVISION 15 - reduce print header font size by 0.5pt and remove underline under memo date */
+@media print {
+  .print-page .header {
+    font-size: 14.0pt !important;
+  }
+  .print-page .memo-row.to .underlined-input {
+    border-bottom: none !important;
+  }
+}
+</style>
+
+
+<style>
+/* REVISION 16 - keep the full month name on one line in the printed memo date */
+@media print {
+  .print-page .memo-row.to {
+    grid-template-columns: 1.00in minmax(0, 1fr) 2ch 0.55in 1.65in !important;
+  }
+  .print-page .memo-row.to .memo-value:last-child,
+  .print-page .memo-row.to .memo-value:last-child span {
+    width: 1.65in !important;
+    min-width: 1.65in !important;
+    white-space: nowrap !important;
+    display: inline-block !important;
+  }
+}
+</style>
+</body>
+<style>
+/* FINAL SIGNATURE ALIGNMENT - REVISION 6 */
+@media print {
+  .print-page .signatures {
+    width: 100% !important;
+    margin-top: 0.14in !important;
+  }
+  .print-page .sig-row {
+    display: grid !important;
+    grid-template-columns: 0.42in 2.20in 0.08in 3.05in 0.10in 0.55in 0.99in !important;
+    column-gap: 0 !important;
+    align-items: start !important;
+    width: 100% !important;
+    margin: 0 0 0.18in 0 !important;
+  }
+  .print-page .sig-label,
+  .print-page .sig-caption,
+  .print-page .sig-date-label {
+    padding-top: 0 !important;
+    line-height: 1.05 !important;
+    white-space: nowrap !important;
+  }
+  .print-page .sig-caption { text-align: left !important; }
+  .print-page .sig-line-wrap {
+    width: 100% !important;
+    min-width: 0 !important;
+    text-align: center !important;
+  }
+  .print-page .sig-line {
+    display: block !important;
+    width: 100% !important;
+    height: 0.14in !important;
+    margin: 0 !important;
+    border-bottom: 1px solid #000 !important;
+  }
+  .print-page .sig-name {
+    display: block !important;
+    width: 100% !important;
+    margin-top: 0.025in !important;
+    text-align: center !important;
+    line-height: 1.05 !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+  }
+  .print-page .sig-date-label {
+    text-align: left !important;
+    padding: 0 !important;
+  }
+  .print-page .sig-date-line {
+    width: 100% !important;
+    height: 0.14in !important;
+    margin: 0 !important;
+    border-bottom: 1px solid #000 !important;
+  }
+  .print-page .sig-date-value {
+    display: block !important;
+    width: 100% !important;
+    margin: -0.02in 0 0 0 !important;
+    text-align: right !important;
+    white-space: nowrap !important;
+    line-height: 1.05 !important;
+    border-bottom: 1px solid #000 !important;
+  }
+}
+</style>
+
+<style>
+/* REVISION 7 - clean signature layout; print-only geometry */
+.sig-name select {
+  margin-left: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  text-align: center !important;
+}
+
+@media print {
+  .print-page .signatures {
+    width: 100% !important;
+    margin-top: 0.12in !important;
+  }
+
+  .print-page .sig-row {
+    display: grid !important;
+    grid-template-columns: 0.42in 2.10in 0.02in 3.31in 0.10in 0.55in 0.99in !important;
+    column-gap: 0 !important;
+    width: 100% !important;
+    align-items: start !important;
+    margin: 0 0 0.18in 0 !important;
+    min-width: 0 !important;
+  }
+
+  .print-page .sig-label,
+  .print-page .sig-caption,
+  .print-page .sig-date-label {
+    padding: 0 !important;
+    margin: 0 !important;
+    line-height: 1.05 !important;
+    white-space: nowrap !important;
+  }
+
+  .print-page .sig-line-wrap {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    text-align: center !important;
+  }
+
+  .print-page .sig-line {
+    display: block !important;
+    width: 100% !important;
+    height: 0.14in !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid #000 !important;
+  }
+
+  .print-page .sig-name {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0.025in 0 0 0 !important;
+    padding: 0 !important;
+    text-align: center !important;
+    font-size: 9.5pt !important;
+    line-height: 1.05 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+  }
+
+  .print-page .sig-date-line {
+    width: 100% !important;
+    height: 0.14in !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid #000 !important;
+  }
+
+  .print-page .sig-date-value {
+    display: block !important;
+    width: 100% !important;
+    margin: -0.02in 0 0 0 !important;
+    padding: 0 !important;
+    text-align: right !important;
+    font-size: 11pt !important;
+    line-height: 1.05 !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+}
+</style>
+
+<style>
+/* REVISION 10 - keep the footer anchored to the bottom of each print page */
+@media print {
+  .print-page {
+    position: relative !important;
+    box-sizing: border-box !important;
+    min-height: 11in !important;
+    height: 11in !important;
+    padding-bottom: 0.62in !important;
+  }
+
+  .print-page .print-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+
+  .print-page > .footer {
+    position: absolute !important;
+    right: 0.48in !important;
+    bottom: 0.30in !important;
+    margin: 0 !important;
+    width: auto !important;
+    text-align: right !important;
+    line-height: 1.05 !important;
+    font-size: 9.5pt !important;
+  }
+}
+
+
+/* REVISION 11 - print body text below the header is not bold */
+@media print {
+  .print-page .print-body > *:not(.header),
+  .print-page .print-body > *:not(.header) * {
+    font-weight: normal !important;
+  }
+}
+</style>
+
+<style>
+/* REVISION 13 - move signature lines/names and date fields left; keep E./F. and captions fixed */
+@media print {
+  .print-page .sig-line-wrap,
+  .print-page .sig-date-label,
+  .print-page .sig-date-line {
+    position: relative !important;
+    left: -0.15in !important;
+  }
+}
+</style>
+
+<style>
+/* REVISION 14 - squeeze signature/date section to increase right margin by 0.25in */
+@media print {
+  .print-page .sig-row {
+    grid-template-columns: 0.42in 2.10in 0.02in 3.15in 0.10in 0.55in 0.90in !important;
+  }
+}
+</style>
+
+
+<style>
+/* ============================================================
+   FINAL PRINT-ONLY STANDARD TEMPLATE MATCH
+   The screen/data-entry form and application logic are unchanged.
+   ============================================================ */
+.header-line-expanded {
+  letter-spacing: 1.1pt;
+}
+
+@media print {
+
+  /* Letter page; keep browser @page margins at zero because the
+     print-page itself supplies the document margins. */
+  @page {
+    size: Letter portrait;
+    margin: 0;
+  }
+
+  .print-page {
+    width: 8.5in !important;
+    height: 11in !important;
+    min-height: 11in !important;
+    box-sizing: border-box !important;
+    padding: 0.40in 0.48in 0.30in 0.48in !important;
+    position: relative !important;
+  }
+
+  /* The reference header is centered on the physical 8.5-inch page,
+     not on the asymmetric body content area. */
+  .print-page .header {
+    position: relative !important;
+    left: -0.13in !important;
+    width: calc(100% + 0.26in) !important;
+    font-family: "Times New Roman", Times, serif !important;
+    font-size: 12pt !important;
+    font-weight: bold !important;
+    line-height: 1.15 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0.49in !important;
+    text-align: center !important;
+  }
+
+  /* The reference form's main working grid begins about 0.90 inch
+     from the physical left edge. The current app's print body is
+     shifted right without changing its internal column geometry. */
+  .print-page .memo {
+    position: relative !important;
+    left: 0.42in !important;
+  }
+
+  .print-page > .print-body > .request-line,
+  .print-page > .print-body > .employee-table-wrapper,
+  .print-page > .print-body > .section,
+  .print-page > .print-body > .signatures {
+    position: relative !important;
+    left: 0.17in !important;
+  }
+
+  /* Parts B-F use the same left alignment grid as Part A.
+     Part A's table has an additional 0.21 in print-only shift;
+     apply that same shift to B-F without changing their internal layout. */
+  .print-page > .print-body > .section,
+  .print-page > .print-body > .signatures {
+    transform: translateX(0.21in) !important;
+  }
+
+  /* Part B total-hours underline: align the line/value field with
+     the standard template while leaving the B. heading untouched. */
+  .print-page .section-b .total-line {
+    transform: none !important;
+    margin-left: 0.10in !important;
+    text-align: center !important;
+  }
+
+  .print-page .section-b .total-line.overall-total {
+    width: 2.45in !important;
+    transform: none !important;
+    margin-left: 0.10in !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+  }
+
+  /* Multi-page Part B note. Keep it on the same baseline as the
+     page subtotal/overall total without changing the established
+     Part B X/Y positioning. */
+  .print-page .section-b .b-note {
+    white-space: nowrap !important;
+    font-size: 10.5pt !important;
+    font-style: normal !important;
+    margin-left: 0.02in !important;
+  }
+
+  /* Part C: align the R in REASONS with the T in TOTAL without
+     moving Part B, and slightly reduce the explanatory text size. */
+  .print-page .section-c .section-copy {
+    transform: translateX(-0.03in) !important;
+  }
+
+  .print-page .section-c .section-detail {
+    font-size: 9.5pt !important;
+  }
+
+  .print-page .section-d .section-detail {
+    font-size: 9.5pt !important;
+  }
+
+  /* Memo labels/value columns match the standard:
+     TO/FROM/SUBJECT move right while DATE is independently
+     brought left to its standard position. */
+  .print-page .memo-row.to,
+  .print-page .memo-row.from {
+    grid-template-columns: 1.00in minmax(0, 1fr) 2ch 0.55in 2.45in !important;
+  }
+
+  /* Memo spacing/vertical rhythm. */
+  .print-page .memo {
+    margin-bottom: 0.27in !important;
+  }
+
+  .print-page .memo-row {
+    margin-bottom: 0.16in !important;
+  }
+
+  .print-page .memo-row.subject {
+    margin-bottom: 0.15in !important;
+  }
+
+  /* Emergency-overtime request line. */
+  .print-page .request-line {
+    margin-bottom: 0.20in !important;
+    display: grid !important;
+    grid-template-columns: 4.45in 1.55in 1.65in !important;
+    column-gap: 0 !important;
+    align-items: baseline !important;
+  }
+
+  .print-page .request-line .request-label {
+    transform: translateX(0.25in) !important;
+  }
+
+  /* Match the standard CTRL#/CC-FC# geometry independently.
+     The labels and underline fields are positioned as a group, with
+     tight label-to-line spacing. */
+  .print-page .request-line .control-box {
+    transform: translate(-0.59in, 0.05in) !important;
+  }
+
+  .print-page .request-line .control-box .underlined-input {
+    min-width: 0.77in !important;
+    width: 0.77in !important;
+    margin-left: 0.03in !important;
+    border-bottom: 0.05px solid black !important;
+  }
+
+  .print-page .request-line .ccfc-box {
+    transform: translate(-0.27in, 0.05in) !important;
+  }
+
+  .print-page .request-line .ccfc-box .underlined-input {
+    min-width: 1.15in !important;
+    width: 1.15in !important;
+    margin-left: 0 !important;
+    border-bottom: 0.05px solid black !important;
+  }
+
+  .print-page .request-line .request-label {
+    transform: translateX(0.21in) !important;
+  }
+
+  .print-page .request-line .underlined-input {
+    border-bottom: 0.05px solid black !important;
+  }
+
+  /* CC/FC# printout: only the bottom row retains the underline. */
+  .print-page .request-line .print-ccfc-value:not(:last-child) {
+    border-bottom: none !important;
+  }
+
+  /* Part A print column alignment: move the first columns right
+     progressively while preserving Date and CTO/Cash positions. */
+  .print-page .employee-table {
+    table-layout: fixed !important;
+  }
+
+  .print-page .employee-table col.num      { width: 0.36in !important; }
+  .print-page .employee-table col.name     { width: 1.70in !important; }
+  .print-page .employee-table col.position { width: 1.18in !important; }
+  .print-page .employee-table col.time     { width: 1.24in !important; }
+  .print-page .employee-table col.hours    { width: 0.46in !important; }
+  .print-page .employee-table col.date     { width: 0.97in !important; }
+  .print-page .employee-table col.type     { width: 1.08in !important; }
+
+  /* Part A heading underline weight. */
+  .print-page .employee-table th .heading {
+    border-bottom: 0.05px solid black !important;
+  }
+
+  /* Position Title heading: independent final alignment adjustment. */
+  .print-page .employee-table thead th:nth-child(3) .heading {
+    display: inline-block !important;
+    transform: translateX(-0.14in) !important;
+  }
+
+  /* Final individual alignment for the remaining Part A headings. */
+  .print-page .employee-table thead th:nth-child(4) .heading {
+    display: inline-block !important;
+    transform: translateX(-0.13in) !important;
+  }
+
+  .print-page .employee-table thead th:nth-child(5) .heading {
+    display: inline-block !important;
+    transform: translateX(-0.13in) !important;
+  }
+
+  .print-page .employee-table thead th:nth-child(6) .heading {
+    display: inline-block !important;
+    transform: translateX(-0.05in) !important;
+  }
+
+  /* Part A: match the compact standard row height. */
+  .print-page .employee-table th,
+  .print-page .employee-table td {
+    height: 0.213in !important;
+    padding: 0 1px !important;
+    line-height: 1.0 !important;
+  }
+  .print-page .employee-table tbody td {
+    font-size: 10pt !important;
+  }
+
+  /* Part A field values: align each value with its corresponding
+     header label while preserving the established column widths. */
+  .print-page .employee-table tbody td:nth-child(3) {
+    transform: translateX(-0.14in) !important;
+  }
+  .print-page .employee-table tbody td:nth-child(4) {
+    transform: translateX(-0.13in) !important;
+  }
+  .print-page .employee-table tbody td:nth-child(5) {
+    transform: translateX(-0.13in) !important;
+  }
+  .print-page .employee-table tbody td:nth-child(6) {
+    transform: translateX(-0.05in) !important;
+  }
+
+  .print-page .employee-table th {
+    height: 0.22in !important;
+    padding-bottom: 2px !important;
+  }
+
+  /* Reduce the gap below the 12-row Part A table so Part B lands
+     at the standard vertical position. */
+  .print-page .employee-table-wrapper {
+    margin-bottom: 0.08in !important;
+    transform: translateX(0.21in) !important;
+  }
+
+  /* Part B: no "(TOTAL hours)" annotation -- it is not on the
+     standard template. */
+  .print-page .section-b {
+    margin-bottom: 0.12in !important;
+  }
+
+  /* Match the standard section spacing. */
+  .print-page .section-c {
+    margin-bottom: 0.34in !important;
+  }
+
+  .print-page .section-d {
+    margin-bottom: 0.16in !important;
+  }
+
+  /* Keep C/D response areas available but visually blank when empty. */
+  .print-page .print-response-text {
+    margin-top: 0.06in !important;
+  }
+
+  /* Signature geometry: retain the existing app's signature logic,
+     but use a fixed print grid and the standard compact spacing. */
+  .print-page .signatures {
+    margin-top: 0.10in !important;
+  }
+
+  .print-page .sig-row {
+    margin-bottom: 0.16in !important;
+  }
+
+  /* Footer follows the standard bottom-right position. */
+  .print-page > .footer {
+    right: 0.38in !important;
+    bottom: 0.30in !important;
+  }
+}
+</style>
+
+<style>
+/* V43 - move Parts D, E, F up one line; raise footer slightly. */
+@media print {
+  /* B and C are slightly too high in the HTML; move them DOWN. */
+  .print-page .section-b { position: relative !important; top: 0.233in !important; }
+  .print-page .section-c { position: relative !important; top: 0.271in !important; }
+
+  /* D and the signature block are too low in the HTML; move them UP. */
+  .print-page .section-d { position: relative !important; top: 0.268in !important; }
+  .print-page .signatures { position: relative !important; top: 0.39in !important; }
+
+  /* Increase the E-to-F spacing so F remains aligned after moving E upward. */
+  .print-page .sig-row { margin-bottom: 0.175in !important; }
+
+  /* The HTML footer is too high; move it DOWN. */
+  .print-page > .footer { right: 0.35in !important; bottom: 0.12in !important; }
+}
+</style>
+
+<style>
+/* V51 - Part F signature field: move the entire line/signature field left,
+   keeping the vertical position unchanged, with a small gap after APPROVED:. */
+@media print {
+  .print-page .signatures .sig-row:nth-child(2) .sig-line-wrap {
+    transform: translateX(-1.00in) !important;
+  }
+  .print-page .signatures .sig-row:nth-child(2) .sig-line {
+    transform: none !important;
+  }
+}
+</style>
+
+<style>
+/* V52 - move DATE fields left by about 3 characters; shorten Part E signature line by about 3 characters. */
+@media print {
+  .print-page .sig-date-label,
+  .print-page .sig-date-line {
+    transform: translateX(-0.25in) !important;
+  }
+  .print-page .signatures .sig-row:nth-child(1) .sig-line {
+    width: calc(100% - 0.25in) !important;
+  }
+}
+</style>
+
+<style>
+/* V53 - Part E signature line: shorten by about one character and center the name field to the line. */
+@media print {
+  .print-page .signatures .sig-row:nth-child(1) .sig-line {
+    width: calc(100% - 0.33in) !important;
+  }
+  .print-page .signatures .sig-row:nth-child(1) .sig-name {
+    width: calc(100% - 0.33in) !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    text-align: center !important;
+  }
+}
+</style>
+
+<style>
+/* V80 - footer: reduce print font by 0.5 pt. */
+@media print {
+  .print-page > .footer {
+    font-size: 8.5pt !important;
+    width: 1.20in !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+  }
+}
+</style>
+
+
+<style>
+/* V81 - print-only wrapping limits for Part C and Part D responses.
+   Keep each response as one stored value; wrap it inside the fixed print area. */
+@media print {
+  .print-page .section-c .print-response-text {
+    height: 0.80in !important;
+    max-height: 0.80in !important;
+    overflow: hidden !important;
+    white-space: pre-wrap !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    box-sizing: border-box !important;
+  }
+
+  .print-page .section-d .print-response-text {
+    height: 0.64in !important;
+    max-height: 0.64in !important;
+    overflow: hidden !important;
+    white-space: pre-wrap !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    box-sizing: border-box !important;
+  }
+}
+</style>
+</html>
+
+<style>
+/* V82 - Correct the right margin for Part C and Part D text areas/output.
+   The print body is shifted right by 0.21in, so reserve that same amount
+   from the response/heading width to keep the actual printed right edge
+   inside the physical page margin.  Screen/fillable fields use the full
+   screen content width with the existing page margins. */
+
+/* Fillable form: keep C/D text inside the page's existing right margin. */
+#screen-view .reason-text,
+#screen-view .completion-text {
+  margin-left: 0.42in !important;
+  margin-right: 0 !important;
+  width: calc(100% - 0.42in - 0.25in) !important;
+  box-sizing: border-box !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+}
+
+#screen-view .section-c .section-copy,
+#screen-view .section-d .section-copy {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+}
+
+@media print {
+  /* The entire section is translated +0.21in in V64's established layout.
+     Reduce the inner width by the same amount so the physical right edge
+     stays at the original page margin. */
+  .print-page .section-c .section-copy,
+  .print-page .section-d .section-copy {
+    width: calc(100% - 0.21in - 0.25in) !important;
+    max-width: calc(100% - 0.21in - 0.25in) !important;
+    min-width: 0 !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+
+  .print-page .section-c .print-response-text,
+  .print-page .section-d .print-response-text {
+    margin-left: 0.42in !important;
+    margin-right: 0.75in !important;
+    width: calc(100% - 0.42in - 0.21in - 0.50in) !important;
+    max-width: calc(100% - 0.42in - 0.21in) !important;
+    box-sizing: border-box !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    white-space: pre-wrap !important;
+  }
+}
+</style>
+
+<style>
+/* V88 - fine vertical adjustment: Part D up half a row; Part E down half a row. */
+@media print {
+  .print-page .section-d { top: 0.1615in !important; }
+  .print-page .signatures .sig-row:nth-child(1) { position: relative !important; top: 0.1065in !important; }
+}
+</style>
