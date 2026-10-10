@@ -1,0 +1,1447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planned Overtime & Job Completion Report</title>
+
+<style>
+    @page {
+        size: Letter portrait;
+        /* Keep the wider side margins, with controlled top and bottom margins. */
+        margin: 0.5in 1in 0.5in 1in;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    html, body {
+        margin: 0;
+        padding: 0;
+        background: #eee;
+        color: #000;
+        font-family: "Times New Roman", Times, serif;
+    }
+
+    body {
+        font-size: 11pt;
+    }
+
+    .controls {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 14px;
+        background: white;
+        border-bottom: 1px solid #ccc;
+        font-family: Arial, sans-serif;
+    }
+
+    button {
+        border: 0;
+        border-radius: 4px;
+        padding: 7px 13px;
+        font-size: 13px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .btn-blue {
+        background: #007bff;
+        color: white;
+    }
+
+    .btn-green {
+        background: #28a745;
+        color: white;
+    }
+
+    .btn-red {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-lavender {
+        background: #b39ddb;
+        color: #211536;
+    }
+
+    .import-export-menu {
+        position: relative;
+        display: inline-block;
+    }
+
+    .import-export-dropdown {
+        display: none;
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        min-width: 160px;
+        background: #fff;
+        border: 1px solid #c9bfd9;
+        border-radius: 5px;
+        box-shadow: 0 4px 10px rgba(0,0,0,.18);
+        padding: 4px;
+        z-index: 200;
+    }
+
+    .import-export-dropdown.open { display: block; }
+
+    .import-export-dropdown button {
+        display: block;
+        width: 100%;
+        text-align: left;
+        background: #fff;
+        color: #211536;
+        border-radius: 3px;
+        padding: 9px 10px;
+        font-weight: normal;
+    }
+
+    .import-export-dropdown button:hover { background: #f0eafa; }
+
+    .action-cell {
+        position: relative;
+        width: 0;
+        padding: 0;
+        overflow: visible;
+    }
+
+    .remove-btn {
+        position: absolute;
+        left: -26px;
+        top: 50%;
+        transform: translateY(-50%);
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        width: 20px;
+        height: 20px;
+        font-size: 13px;
+        font-weight: bold;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        z-index: 10;
+    }
+
+    .remove-btn:hover {
+        background-color: #bd2130;
+    }
+
+    /* ---------- SCREEN CONTAINER (Continuous Form) ---------- */
+    #screen-view {
+        width: 8.5in;
+        margin: 15px auto;
+        padding: 0.35in 0.82in 0.30in 0.82in;
+        background: white;
+        box-shadow: 0 0 5px rgba(0,0,0,.25);
+    }
+
+    #screen-view,
+    #screen-view *,
+    #print-view,
+    #print-view * {
+        font-family: "Times New Roman", Times, serif !important;
+    }
+
+    /* ---------- COMMON STYLES ---------- */
+    .header {
+        text-align: center;
+        font-weight: bold;
+        font-size: 14.5pt;
+        line-height: 1.08;
+        letter-spacing: .15px;
+        margin-top: 0.02in;
+        margin-bottom: 0.15in;
+    }
+
+    .sub-header {
+        text-align: center;
+        font-weight: bold;
+        font-size: 12pt;
+        margin-bottom: 0.15in;
+    }
+
+    .period-row {
+        margin-bottom: 0.15in;
+        font-size: 11.5pt;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .clean-input,
+    input, select, textarea {
+        border: none;
+        outline: none;
+        background: transparent;
+        font-family: inherit;
+        font-size: inherit;
+        color: inherit;
+        padding: 0;
+        margin: 0;
+    }
+
+    .underlined-input {
+        border: none;
+        border-bottom: 1px solid black;
+        background: transparent;
+        font-family: inherit;
+        font-size: inherit;
+        padding: 0 2px;
+        outline: none;
+    }
+
+    .employee-table-wrapper {
+        margin-bottom: 0.20in;
+    }
+
+    .employee-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        font-size: 10.5pt;
+        margin: 0;
+        border: 1px solid #000;
+    }
+
+    /* Column Widths */
+    .employee-table col.action { width: 0.25in; }
+    .employee-table col.date { width: 1.10in; }
+    .employee-table col.time { width: 1.50in; }
+    .employee-table col.hours { width: 0.70in; }
+    .employee-table col.desc { width: 3.35in; }
+
+    .employee-table th,
+    .employee-table td {
+        border: 1px solid #000;
+        padding: 4px 6px;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    .employee-table th {
+        font-weight: bold;
+        background-color: #f2f2f2;
+        text-align: center;
+    }
+
+    .employee-table input,
+    .employee-table select {
+        width: 100%;
+    }
+
+    .time-cell-container {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        width: 100%;
+    }
+
+    .time-cell-container select {
+        flex: 1;
+        min-width: 0;
+        font-size: 9pt;
+    }
+
+    .desc-textarea {
+        width: 100%;
+        height: 3.6em;
+        min-height: 3.6em;
+        max-height: 3.6em;
+        resize: none;
+        font-family: inherit;
+        font-size: inherit;
+        line-height: 1.15;
+        border: none;
+        outline: none;
+        background: transparent;
+    }
+
+    .total-bar {
+        display: flex;
+        width: 100%;
+        font-weight: bold;
+        padding: 4px 0;
+        margin-top: 4px;
+        font-size: 10.5pt;
+    }
+
+    .add-entry-container {
+        margin-top: 8px;
+        margin-bottom: 20px;
+    }
+
+    .section-title {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .comments-section {
+        margin-bottom: 0.15in;
+    }
+
+    .comments-space {
+        height: 0.46in;
+        width: 100%;
+    }
+
+    .signatures {
+        font-size: 11pt;
+        margin-top: 0.15in;
+    }
+
+    .sig-block {
+        margin-bottom: 0.15in;
+    }
+
+    .sig-grid {
+        display: grid;
+        grid-template-columns: 1fr 1.5in;
+        gap: 0.5in;
+        align-items: start;
+    }
+
+    .sig-line {
+        display: block;
+        width: 100%;
+        height: 0.45in;
+        border-bottom: 1px solid #000;
+        margin-bottom: 4px;
+    }
+
+    .sig-inputs {
+        display: flex;
+        gap: 15px;
+        width: 100%;
+    }
+
+    .sig-inputs select {
+        border-bottom: 1px dotted #666;
+        padding: 2px 0;
+        appearance: auto;
+    }
+
+    .sig-date-label {
+        display: block;
+        text-align: center;
+        font-size: 10.5pt;
+    }
+
+    /* ---------- PRINT VIEW STYLES ---------- */
+    #print-view {
+        display: none;
+    }
+
+    @media screen {
+        #print-view {
+            display: none !important;
+        }
+    }
+
+    @media print {
+        html, body {
+            width: auto;
+            background: white;
+        }
+
+        .controls {
+            display: none !important;
+        }
+
+        #screen-view {
+            display: none !important;
+        }
+
+        #print-view {
+            display: block !important;
+        }
+
+        .print-page {
+            width: 100%;
+            height: 10in;
+            max-height: 10in;
+            margin: 0;
+            padding: 0;
+            page-break-after: always;
+            break-after: page;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            box-sizing: border-box;
+        }
+
+        .print-page:last-child {
+            page-break-after: avoid;
+            break-after: avoid;
+        }
+
+        input, select, textarea {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            border: none !important;
+            background: transparent !important;
+        }
+
+        .employee-table {
+            border: 1px solid #000 !important;
+        }
+
+        .employee-table th, .employee-table td {
+            border: 1px solid #000 !important;
+        }
+
+        select {
+            appearance: none !important;
+            -webkit-appearance: none !important;
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<div class="controls">
+    <button class="btn-blue" onclick="triggerPrint()">Print / Save PDF</button>
+    <button class="btn-green" onclick="savePOTFile()">Save Planned OT</button>
+    <button class="btn-blue" onclick="document.getElementById('potFileInput').click()">Open Planned OT</button>
+    <input type="file" id="potFileInput" style="display:none" accept=".pot,.json,application/json" onchange="openPOTFile(event)">
+    <div class="import-export-menu" id="importExportMenu">
+        <button type="button" class="btn-lavender" onclick="toggleImportExportMenu(event)">Import / Export ▾</button>
+        <div class="import-export-dropdown" id="importExportDropdown">
+            <button type="button" onclick="exportToXLSX(); closeImportExportMenu()">Export XLSX</button>
+            <button type="button" onclick="document.getElementById('xlsxImportInput').click(); closeImportExportMenu()">Import XLSX</button>
+        </div>
+    </div>
+    <input type="file" id="xlsxImportInput" style="display:none" accept=".xlsx,.xls" onchange="importFromXLSX(event)">
+    <button class="btn-red" onclick="resetEntries()">Reset All Entries</button>
+</div>
+
+<!-- CONTINUOUS SCREEN VIEW FOR DATA ENTRY -->
+<div id="screen-view"></div>
+
+<!-- PAGINATED PRINT VIEW (Generated dynamically on print) -->
+<div id="print-view"></div>
+
+<script>
+const employeeList = [
+    "Aipoalani, Adam", "Alip, Davin", "Almasagidi, Khaled", "Arruda, Cortney", "Baptista, Jayson", "Bidad, Kaleo", "Cacabelos, Delton", "Camacho, Stacey", "Cardoza, Jason", "Carvalho, Eric", "Carvalho, Ricky", "CarvalhoWilbur, Briecian", "Castaneda, Jeremy", "Cawagas, Roger", "Chiquita, John", "Cogo, William", "Corpuz, Casey", "Corpuz, Clifford", "Crivello, Wyatt-Levi", "Crum, Kainoa", "Dacalio, Wayne", "Del Mar, Anthony", "Devera, Keenan", "Dupre, Michael", "Ebreo, Michael", "Enos, Reemoni", "Estabilio, Bradley", "Fuerte, Jake", "Gomes, Karlton", "Gomes, Randy", "Graig, Mikhail", "Haleamau-Martin, Kekoa", "Harris, Chance", "Higa, Tyrus", "Horvath, Corbin", "Hurley, Allen", "Idomoto, Alexander", "Juan, Brandon", "Kaaua, Rayce", "Kagawa, Troystan", "Kahauolopua, Tonylee", "Kahele, Gibson", "Kailiwai, Daniel", "Kalingo, Timothy", "Kaolulo-Takiue, Kaleb", "Kealoha, Bradley", "Kealoha-Mattos, Chelson", "Kidani, Jerrod", "Lee Loy, Benedict", "Lee, Robert", "Mahoe, Tyler", "Mateo, Thomas", "Mattos, Andrew", "Medeiros, Heidi", "Medeiros, Kailan", "Mortensen, Aukelenui", "Moses, Stacey", "Moses-Kalingo, Jennifer", "Mosley, Kentzie", "Nabarro, Royden", "Nakamoto, Kaipo", "Navarro-Castillo, Deltan", "Nelson, Shane", "Omori, Troy", "Orcino, Franklin", "Ortega, Nathan", "Oshiro, Rickey", "Pa, Aaron", "Pacheco, Kason", "Paiva, Audra", "Paiva, Russell", "Perez, Francis", "Rapozo, Kane", "Reyes-Dawson, Manoa", "Rivera, Franklin", "Rodero, Glenn", "Romeo, Christopher", "Rosario, Robert", "Samson, Bryson", "Santos, Elgin", "Santos, Walter", "Schauf, Curtis", "Schneider, Benjamin", "Seghorn, Debbie", "Shioji, Ryan", "Silva, Cameron", "Simao, Dean", "Simeon, Allan", "Sioloa, Stevenson", "Soares, Marcia", "Souza, Darin", "Spencer, Kaiponohea", "Sueda, Aisha", "Supe, Courtney", "Tabac, Troy", "Toledo, Isaiah", "Tomori, Hugh", "Valdez, Victor", "Vargas, Duane", "Villa, Remy", "Vincent, Wendell", "Vuckovich, John", "Watanabe, Chad", "White, Thomas", "Wong, Anthony", "Yamasaki, Lesley"
+];
+
+const positionList = [
+    "ACCT CLK IV", "ADMIN ASST III", "AMH", "AMS II", "BMS I", "BMS II", "BMW I", "BSS II", 
+    "DRFT TECH VI", "ENGR I", "ENGR II", "ENGR III", "ENGR IV", "ENGR TECH V", "ENGR TECH VI", 
+    "ENGR V", "ENGR VI", "EO I", "EO II", "EO III", "GL I", "HC INSP III", "HC INSP IV", 
+    "HCI I", "HCI II", "HCMS II", "HCMS IV", "HCMS VI", "HEO", "HMS I", "HR ASST IV", 
+    "HVCEM I", "HVY TRK DR", "JAN II", "LAND SRVY I", "LAND SRVY II", "OA IV", "PAINT HELP", 
+    "PAINT I", "PRJT MGR II", "PUR TECH I", "S PAINT HELP", "S PAINT I", "TRK DR LBR", 
+    "TSMO II", "TSMS", "WELD I"
+];
+
+const approverList = [
+    "CLIFFORD A. CORPUZ, ACTING DISTRICT ENGINEER",
+    "KENTZIE K. MOSLEY, ACTING DISTRICT ENGINEER"
+];
+
+const monthList = [
+    "January", "February", "March", "April", "May", "June", 
+    "July", "August", "September", "October", "November", "December"
+];
+
+const yearList = ["2025", "2026", "2027", "2028", "2029"];
+
+const payPeriodList = ["1st Pay Period", "2nd Pay Period"];
+
+function generateEmployeeOptions(selectedValue) {
+    let html = '<option value="">-- Select Employee --</option>';
+    employeeList.forEach(name => {
+        let selected = (selectedValue === name) ? 'selected' : '';
+        html += `<option value="${name}" ${selected}>${name}</option>`;
+    });
+    return html;
+}
+
+function generatePositionOptions(selectedValue) {
+    let html = '<option value="">-- Select Position --</option>';
+    positionList.forEach(pos => {
+        let selected = (selectedValue === pos) ? 'selected' : '';
+        html += `<option value="${pos}" ${selected}>${pos}</option>`;
+    });
+    return html;
+}
+
+function generateApproverOptions(selectedValue) {
+    let html = '<option value="">-- Select Reviewer --</option>';
+    approverList.forEach(app => {
+        let selected = (selectedValue === app) ? 'selected' : '';
+        html += `<option value="${app}" ${selected}>${app}</option>`;
+    });
+    return html;
+}
+
+function generateMonthOptions(selectedValue) {
+    let html = '';
+    monthList.forEach(m => {
+        let selected = (selectedValue === m) ? 'selected' : '';
+        html += `<option value="${m}" ${selected}>${m}</option>`;
+    });
+    return html;
+}
+
+function generateYearOptions(selectedValue) {
+    let html = '';
+    yearList.forEach(y => {
+        let selected = (selectedValue === y) ? 'selected' : '';
+        html += `<option value="${y}" ${selected}>${y}</option>`;
+    });
+    return html;
+}
+
+function generatePayPeriodOptions(selectedValue) {
+    let html = '';
+    payPeriodList.forEach(p => {
+        let selected = (selectedValue === p) ? 'selected' : '';
+        html += `<option value="${p}" ${selected}>${p}</option>`;
+    });
+    return html;
+}
+
+function formatEmployeeNameFirstLast(fullName) {
+    if (!fullName) return "";
+    let parts = fullName.split(",");
+    if (parts.length === 2) {
+        return parts[1].trim() + " " + parts[0].trim();
+    }
+    return fullName;
+}
+
+let plannedData = Array(12).fill(null).map(() => ({
+    date: "",
+    startTime: "",
+    endTime: "",
+    time: "",
+    hours: "",
+    description: ""
+}));
+
+let formData = {
+    periodMonth: "August",
+    periodYear: "2026",
+    periodPayPeriod: "2nd Pay Period",
+    subEmployee: "",
+    subPosition: "",
+    reviewer: "CLIFFORD A. CORPUZ, ACTING DISTRICT ENGINEER"
+};
+
+function parseTimeToMinutes(timeStr) {
+    if (!timeStr) return null;
+    let match = timeStr.match(/^(\d{2}):(\d{2})(am|pm)$/i);
+    if (!match) return null;
+    let h = parseInt(match[1], 10);
+    let m = parseInt(match[2], 10);
+    let ampm = match[3].toLowerCase();
+    if (ampm === 'pm' && h < 12) h += 12;
+    if (ampm === 'am' && h === 12) h = 0;
+    return h * 60 + m;
+}
+
+function calculateHours(startTime, endTime) {
+    let startMin = parseTimeToMinutes(startTime);
+    let endMin = parseTimeToMinutes(endTime);
+    if (startMin === null || endMin === null) return "";
+    let diffMin = endMin - startMin;
+    if (diffMin < 0) diffMin += 24 * 60;
+    let hours = diffMin / 60;
+    return hours.toFixed(2);
+}
+
+function generateTimeOptions(selectedValue) {
+    let html = '<option value="">--:--</option>';
+    for (let h = 0; h < 24; h++) {
+        for (let m = 0; m < 60; m += 15) {
+            let hour12 = h % 12 === 0 ? 12 : h % 12;
+            let minStr = m < 10 ? '0' + m : m;
+            let ampm = h < 12 ? 'am' : 'pm';
+            let hourStr = hour12 < 10 ? '0' + hour12 : hour12;
+            let timeVal = `${hourStr}:${minStr}${ampm}`;
+            let selected = (selectedValue === timeVal) ? 'selected' : '';
+            html += `<option value="${timeVal}" ${selected}>${timeVal}</option>`;
+        }
+    }
+    return html;
+}
+
+function syncPayPeriodFromDates() {
+    const validDates = plannedData.map(row => row.date).filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+    if (!validDates.length) {
+        formData.periodMonth = "";
+        formData.periodYear = "";
+        formData.periodPayPeriod = "";
+    } else {
+        const [year, month, day] = validDates[validDates.length - 1].split("-").map(Number);
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        formData.periodMonth = monthNames[month - 1];
+        formData.periodYear = String(year);
+        formData.periodPayPeriod = day <= 15 ? "1st Pay Period" : "2nd Pay Period";
+    }
+    const display = document.getElementById("screen-period-display");
+    if (display) display.textContent = ([formData.periodMonth, formData.periodYear].filter(Boolean).join(" ") + (formData.periodPayPeriod ? ", " + formData.periodPayPeriod : "")) || "Dynamically Determined";
+}
+
+function updateRow(index, field, value) {
+    plannedData[index][field] = value;
+    if (field === 'date') syncPayPeriodFromDates();
+    if (field === 'startTime' || field === 'endTime') {
+        let st = plannedData[index].startTime;
+        let et = plannedData[index].endTime;
+        if (st && et) {
+            plannedData[index].time = `${st} - ${et}`;
+            plannedData[index].hours = calculateHours(st, et);
+        } else {
+            plannedData[index].time = "";
+            plannedData[index].hours = "";
+        }
+        renderScreenView();
+    }
+}
+
+function updateField(field, value) {
+    formData[field] = value;
+}
+
+function addRow() {
+    syncScreenInputsToState();
+    plannedData.push({
+        date: "",
+        startTime: "",
+        endTime: "",
+        time: "",
+        hours: "",
+        description: ""
+    });
+    renderScreenView();
+}
+
+function removeEntry(index) {
+    syncScreenInputsToState();
+    plannedData.splice(index, 1);
+    if (plannedData.length === 0) {
+        plannedData.push({
+            date: "",
+            startTime: "",
+            endTime: "",
+            time: "",
+            hours: "",
+            description: ""
+        });
+    }
+    renderScreenView();
+}
+
+function resetEntries() {
+    if (confirm("Are you sure you want to clear all entries?")) {
+        plannedData = Array(12).fill(null).map(() => ({
+            date: "",
+            startTime: "",
+            endTime: "",
+            time: "",
+            hours: "",
+            description: ""
+        }));
+        formData.periodMonth = "";
+        formData.periodYear = "";
+        formData.periodPayPeriod = "";
+        formData.subEmployee = "";
+        formData.subPosition = "";
+        formData.reviewer = "CLIFFORD A. CORPUZ, ACTING DISTRICT ENGINEER";
+        renderScreenView();
+    }
+}
+
+function syncScreenInputsToState() {
+    document.querySelectorAll("#screen-view .employee-table tbody tr").forEach((tr, idx) => {
+        if (plannedData[idx]) {
+            const dateInput = tr.querySelector(".input-date");
+            const startSelect = tr.querySelector(".select-start");
+            const endSelect = tr.querySelector(".select-end");
+            const descArea = tr.querySelector(".desc-textarea");
+
+            if (dateInput) plannedData[idx].date = dateInput.value;
+            if (startSelect) plannedData[idx].startTime = startSelect.value;
+            if (endSelect) plannedData[idx].endTime = endSelect.value;
+            if (startSelect && endSelect && startSelect.value && endSelect.value) {
+                plannedData[idx].time = `${startSelect.value} - ${endSelect.value}`;
+                plannedData[idx].hours = calculateHours(startSelect.value, endSelect.value);
+            }
+            if (descArea) plannedData[idx].description = descArea.value;
+        }
+    });
+
+    syncPayPeriodFromDates();
+
+    const subEmpInput = document.getElementById("screen-subEmployee");
+    if (subEmpInput) formData.subEmployee = subEmpInput.value;
+    const subPosInput = document.getElementById("screen-subPosition");
+    if (subPosInput) formData.subPosition = subPosInput.value;
+    const reviewerInput = document.getElementById("screen-reviewer");
+    if (reviewerInput) formData.reviewer = reviewerInput.value;
+}
+
+function renderScreenView() {
+    syncPayPeriodFromDates();
+    const container = document.getElementById("screen-view");
+    
+    let totalHours = plannedData.reduce((sum, row) => {
+        let h = parseFloat(row.hours);
+        return sum + (isNaN(h) ? 0 : h);
+    }, 0);
+    let totalHoursStr = totalHours ? totalHours.toFixed(2) : "0.00";
+
+    const rowsHtml = plannedData.map((row, globalIdx) => {
+        return `
+            <tr>
+                <td class="action-cell"><button type="button" class="remove-btn" onclick="removeEntry(${globalIdx})">×</button></td>
+                <td><input type="date" class="input-date" value="${escapeHtml(row.date)}" oninput="updateRow(${globalIdx}, 'date', this.value)"></td>
+                <td>
+                    <div class="time-cell-container">
+                        <select class="select-start" onchange="updateRow(${globalIdx}, 'startTime', this.value)">
+                            ${generateTimeOptions(row.startTime)}
+                        </select>
+                        <span>-</span>
+                        <select class="select-end" onchange="updateRow(${globalIdx}, 'endTime', this.value)">
+                            ${generateTimeOptions(row.endTime)}
+                        </select>
+                    </div>
+                </td>
+                <td style="text-align: center; vertical-align: middle;">${escapeHtml(row.hours)}</td>
+                <td>
+                    <textarea class="desc-textarea" placeholder="Description of work..." oninput="updateRow(${globalIdx}, 'description', this.value)">${escapeHtml(row.description)}</textarea>
+                </td>
+            </tr>
+        `;
+    }).join("");
+
+    container.innerHTML = `
+        <div class="header">
+            OVERTIME JOB COMPLETION REPORT
+        </div>
+        <div style="text-align: center; font-size: 10.5pt; margin-bottom: 0.12in;">
+            Describe the amount of work completed. If applicable, explain why authorized work was not completed.
+        </div>
+
+        <div class="sub-header">
+            PLANNED OVERTIME
+        </div>
+
+        <div class="period-row">
+            <strong>Pay Period:</strong>
+            <span id="screen-period-display" class="underlined-input" style="display:inline-block; min-width:4.6in; padding:0.02in 0.08in; border-bottom:1px solid #000;" aria-readonly="true">${([formData.periodMonth, formData.periodYear].filter(Boolean).join(" ") + (formData.periodPayPeriod ? ", " + formData.periodPayPeriod : "")) || "Dynamically Determined"}</span>
+        </div>
+
+        <div class="employee-table-wrapper">
+            <table class="employee-table">
+                <colgroup>
+                    <col class="action"><col class="date"><col class="time"><col class="hours"><col class="desc">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th class="action"></th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Hours</th>
+                        <th>Description of Work</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rowsHtml}
+                </tbody>
+            </table>
+            <div class="total-bar">
+                <div style="width: 2.85in; text-align: right; padding-right: 10px;">TOTAL</div>
+                <div style="width: 0.70in; text-align: center;">${escapeHtml(totalHoursStr)}</div>
+                <div style="flex: 1;"></div>
+            </div>
+        </div>
+
+        <div class="add-entry-container">
+            <button class="btn-green" onclick="addRow()">+ Add Entry</button>
+        </div>
+
+        <div class="signatures">
+            <div class="sig-block">
+                <div class="section-title">SUBMITTED BY:</div>
+                <div class="sig-grid">
+                    <div>
+                        <span class="sig-line"></span>
+                        <div class="sig-inputs">
+                            <select id="screen-subEmployee" onchange="updateField('subEmployee', this.value)">
+                                ${generateEmployeeOptions(formData.subEmployee)}
+                            </select>
+                            <select id="screen-subPosition" onchange="updateField('subPosition', this.value)">
+                                ${generatePositionOptions(formData.subPosition)}
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="sig-line"></span>
+                        <span class="sig-date-label">Date</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="comments-section">
+                <div class="section-title">REVIEWER'S COMMENTS:</div>
+                <div class="comments-space"></div>
+            </div>
+
+            <div class="sig-block" style="margin-top: 0.15in;">
+                <div class="sig-grid">
+                    <div>
+                        <span class="sig-line"></span>
+                        <div class="sig-inputs">
+                            <select id="screen-reviewer" onchange="updateField('reviewer', this.value)">
+                                ${generateApproverOptions(formData.reviewer)}
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="sig-line"></span>
+                        <span class="sig-date-label">Date</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function triggerPrint() {
+    syncScreenInputsToState();
+    generatePrintView();
+    window.print();
+}
+
+function formatDateDisplay(dateStr) {
+    if (!dateStr) return "";
+    let parts = dateStr.split("-");
+    if (parts.length === 3) {
+        return `${parts[1]}/${parts[2]}/${parts[0].slice(-2)}`;
+    }
+    return dateStr;
+}
+
+function generatePrintView() {
+    const printContainer = document.getElementById("print-view");
+    printContainer.innerHTML = "";
+
+    let totalHours = plannedData.reduce((sum, row) => {
+        let h = parseFloat(row.hours);
+        return sum + (isNaN(h) ? 0 : h);
+    }, 0);
+    let totalHoursStr = totalHours ? totalHours.toFixed(2) : "0.00";
+
+    const maxPage1Rows = 12;
+    const hasMore = plannedData.length > maxPage1Rows;
+    const fullPeriodStr = `${formData.periodMonth} ${formData.periodYear}, ${formData.periodPayPeriod}`;
+    const formattedSubName = formatEmployeeNameFirstLast(formData.subEmployee);
+
+    if (!hasMore) {
+        // --- SINGLE PAGE (10 or fewer rows) ---
+        let page1Rows = [...plannedData];
+        while (page1Rows.length < 12) {
+            page1Rows.push({ date: "", startTime: "", endTime: "", time: "", hours: "", description: "" });
+        }
+
+        const page1 = document.createElement("div");
+        page1.className = "print-page";
+
+        let p1RowsHtml = page1Rows.map((row) => {
+            return `
+                <tr>
+                    <td style="height: 0.56in; vertical-align: middle;">${escapeHtml(formatDateDisplay(row.date))}</td>
+                    <td style="height: 0.56in; vertical-align: middle;">${escapeHtml(row.time)}</td>
+                    <td style="height: 0.56in; text-align: center; vertical-align: middle;">${escapeHtml(row.hours)}</td>
+                    <td style="height: 0.56in; vertical-align: top; padding-top: 1px;"><div style="font-size: 9pt; height: 36pt; overflow: visible; white-space: pre-wrap; line-height: 9pt;">${escapeHtml(row.description)}</div></td>
+                </tr>
+            `;
+        }).join("");
+
+        page1.innerHTML = `
+            <div>
+                <div class="header" style="margin-top: 0in; margin-bottom: 0.08in; font-size: 13.5pt;">
+                    OVERTIME JOB COMPLETION REPORT
+                </div>
+                <div style="text-align: left; font-size: 10pt; margin-bottom: 0.14in;">
+                    Describe the amount of work completed. If applicable, explain why authorized work was not completed.
+                </div>
+
+                <div class="sub-header" style="font-size: 11pt; margin-bottom: 0.06in;">
+                    PLANNED OVERTIME
+                </div>
+
+                <div class="period-row" style="font-size: 10.5pt; margin-bottom: 0.04in;">
+                    <strong>${escapeHtml(fullPeriodStr)}</strong>
+                </div>
+
+                <div class="employee-table-wrapper" style="margin-bottom: 0in;">
+                    <table class="employee-table" style="font-size: 10pt;">
+                        <colgroup>
+                            <col style="width: 1.15in;"><col style="width: 1.55in;"><col style="width: 0.75in;"><col style="width: 3.85in;">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th style="padding: 4px;">Date</th>
+                                <th style="padding: 4px;">Time</th>
+                                <th style="padding: 4px;">Hours</th>
+                                <th style="padding: 4px;">Description of Work</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${p1RowsHtml}
+                        </tbody>
+                    </table>
+                    <div style="display: flex; width: 100%; font-weight: bold; padding: 4px 0; margin-top: 4px; font-size: 10pt;">
+                        <div style="width: 2.70in; text-align: right; padding-right: 10px;">TOTAL</div>
+                        <div style="width: 0.75in; text-align: center;">${escapeHtml(totalHoursStr)}</div>
+                        <div style="flex: 1;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="signatures" style="font-size: 10.5pt; margin-top: 0.20in;">
+                <div class="sig-block" style="margin-bottom: 0.12in;">
+                    <div class="section-title" style="margin-bottom: 2px;">SUBMITTED BY:</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1.5in; gap: 0.5in; align-items: start;">
+                        <div>
+                            <div style="height: 0.45in; border-bottom: 1px solid #000; width: 100%; margin-bottom: 3px;"></div>
+                            <div style="font-size: 10.5pt; font-weight: bold;">
+                                ${escapeHtml(formattedSubName)}${formData.subPosition ? ', ' + escapeHtml(formData.subPosition) : ''}
+                            </div>
+                        </div>
+                        <div>
+                            <div style="height: 0.45in; border-bottom: 1px solid #000; width: 100%; margin-bottom: 3px;"></div>
+                            <div style="text-align: center; font-size: 10pt;">Date</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comments-section" style="margin-bottom: 0.12in;">
+                    <div class="section-title" style="margin-bottom: 4px;">REVIEWER'S COMMENTS:</div>
+                    <div style="height: 0.30in; width: 100%;"></div>
+                </div>
+
+                <div class="sig-block" style="margin-bottom: 0in;">
+                    <div style="display: grid; grid-template-columns: 1fr 1.5in; gap: 0.5in; align-items: start;">
+                        <div>
+                            <div style="height: 0.45in; border-bottom: 1px solid #000; width: 100%; margin-bottom: 3px;"></div>
+                            <div style="font-size: 10.5pt; font-weight: bold;">
+                                ${escapeHtml(formData.reviewer)}
+                            </div>
+                        </div>
+                        <div>
+                            <div style="height: 0.45in; border-bottom: 1px solid #000; width: 100%; margin-bottom: 3px;"></div>
+                            <div style="text-align: center; font-size: 10pt;">Date</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        printContainer.appendChild(page1);
+
+    } else {
+        // --- MULTI-PAGE (> 10 rows) ---
+        let page1Rows = plannedData.slice(0, 12);
+        const remainingRows = plannedData.slice(12);
+
+        const subsequentChunks = [];
+        for (let i = 0; i < remainingRows.length; i += 18) {
+            subsequentChunks.push(remainingRows.slice(i, i + 18));
+        }
+
+        // Page 1
+        const page1 = document.createElement("div");
+        page1.className = "print-page";
+
+        let p1RowsHtml = page1Rows.map((row) => {
+            return `
+                <tr>
+                    <td style="height: 0.56in; vertical-align: middle;">${escapeHtml(formatDateDisplay(row.date))}</td>
+                    <td style="height: 0.56in; vertical-align: middle;">${escapeHtml(row.time)}</td>
+                    <td style="height: 0.56in; text-align: center; vertical-align: middle;">${escapeHtml(row.hours)}</td>
+                    <td style="height: 0.56in; vertical-align: top; padding-top: 1px;"><div style="font-size: 9pt; height: 36pt; overflow: visible; white-space: pre-wrap; line-height: 9pt;">${escapeHtml(row.description)}</div></td>
+                </tr>
+            `;
+        }).join("");
+
+        page1.innerHTML = `
+            <div>
+                <div class="header" style="margin-top: 0in; margin-bottom: 0.08in; font-size: 13.5pt;">
+                    OVERTIME JOB COMPLETION REPORT
+                </div>
+                <div style="text-align: left; font-size: 10pt; margin-bottom: 0.14in;">
+                    Describe the amount of work completed. If applicable, explain why authorized work was not completed.
+                </div>
+
+                <div class="sub-header" style="font-size: 11pt; margin-bottom: 0.06in;">
+                    PLANNED OVERTIME
+                </div>
+
+                <div class="period-row" style="font-size: 10.5pt; margin-bottom: 0.04in;">
+                    <strong>${escapeHtml(fullPeriodStr)}</strong>
+                </div>
+
+                <div class="employee-table-wrapper" style="margin-bottom: 0in;">
+                    <table class="employee-table" style="font-size: 10pt;">
+                        <colgroup>
+                            <col style="width: 1.15in;"><col style="width: 1.55in;"><col style="width: 0.75in;"><col style="width: 3.85in;">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th style="padding: 4px;">Date</th>
+                                <th style="padding: 4px;">Time</th>
+                                <th style="padding: 4px;">Hours</th>
+                                <th style="padding: 4px;">Description of Work</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${p1RowsHtml}
+                        </tbody>
+                    </table>
+                    <div style="text-align: right; font-size: 10pt; font-weight: bold; margin-top: 4px;">Hours Continued on Page 2</div>
+                    <div style="display: flex; width: 100%; font-weight: bold; padding: 4px 0; margin-top: 2px; font-size: 10pt;">
+                        <div style="width: 2.70in; text-align: right; padding-right: 10px;">TOTAL</div>
+                        <div style="width: 0.75in; text-align: center;">${escapeHtml(totalHoursStr)}</div>
+                        <div style="flex: 1;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="signatures" style="font-size: 10.5pt; margin-top: 0.20in;">
+                <div class="sig-block" style="margin-bottom: 0.12in;">
+                    <div class="section-title" style="margin-bottom: 2px;">SUBMITTED BY:</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1.5in; gap: 0.5in; align-items: start;">
+                        <div>
+                            <div style="height: 0.45in; border-bottom: 1px solid #000; width: 100%; margin-bottom: 3px;"></div>
+                            <div style="font-size: 10.5pt; font-weight: bold;">
+                                ${escapeHtml(formattedSubName)}${formData.subPosition ? ', ' + escapeHtml(formData.subPosition) : ''}
+                            </div>
+                        </div>
+                        <div>
+                            <div style="height: 0.45in; border-bottom: 1px solid #000; width: 100%; margin-bottom: 3px;"></div>
+                            <div style="text-align: center; font-size: 10pt;">Date</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comments-section" style="margin-bottom: 0.12in;">
+                    <div class="section-title" style="margin-bottom: 4px;">REVIEWER'S COMMENTS:</div>
+                    <div style="height: 0.30in; width: 100%;"></div>
+                </div>
+
+                <div class="sig-block" style="margin-bottom: 0in;">
+                    <div style="display: grid; grid-template-columns: 1fr 1.5in; gap: 0.5in; align-items: start;">
+                        <div>
+                            <div style="height: 0.45in; border-bottom: 1px solid #000; width: 100%; margin-bottom: 3px;"></div>
+                            <div style="font-size: 10.5pt; font-weight: bold;">
+                                ${escapeHtml(formData.reviewer)}
+                            </div>
+                        </div>
+                        <div>
+                            <div style="height: 0.45in; border-bottom: 1px solid #000; width: 100%; margin-bottom: 3px;"></div>
+                            <div style="text-align: center; font-size: 10pt;">Date</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        printContainer.appendChild(page1);
+
+        // Subsequent Pages
+        subsequentChunks.forEach((chunk, chunkIdx) => {
+            const pageNum = chunkIdx + 2;
+            const hasNextPage = chunkIdx < subsequentChunks.length - 1;
+            const nextPageNum = pageNum + 1;
+            const pageNext = document.createElement("div");
+            pageNext.className = "print-page";
+
+            let rowsHtml = chunk.map((row) => {
+                return `
+                    <tr>
+                        <td style="height: 0.56in; vertical-align: middle;">${escapeHtml(formatDateDisplay(row.date))}</td>
+                        <td style="height: 0.56in; vertical-align: middle;">${escapeHtml(row.time)}</td>
+                        <td style="height: 0.56in; text-align: center; vertical-align: middle;">${escapeHtml(row.hours)}</td>
+                        <td style="height: 0.56in; vertical-align: top; padding-top: 1px;"><div style="font-size: 9pt; height: 36pt; overflow: visible; white-space: pre-wrap; line-height: 9pt;">${escapeHtml(row.description)}</div></td>
+                    </tr>
+                `;
+            }).join("");
+
+            pageNext.innerHTML = `
+                <div>
+                    <div style="text-align: center; font-weight: bold; font-size: 11pt; margin-bottom: 0.15in;">
+                        Overtime Job Completion Report (Continued) — Page ${pageNum}
+                    </div>
+                    
+                    <div class="employee-table-wrapper">
+                        <table class="employee-table">
+                            <colgroup>
+                                <col style="width: 1.15in;"><col style="width: 1.55in;"><col style="width: 0.75in;"><col style="width: 3.85in;">
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Hours</th>
+                                    <th>Description of Work</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rowsHtml}
+                            </tbody>
+                        </table>
+                        ${hasNextPage ? `<div style="text-align: right; font-size: 10pt; font-weight: bold; margin-top: 4px;">Hours Continued on Page ${nextPageNum}</div>` : ''}
+                    </div>
+                </div>
+                <div></div>
+            `;
+
+            printContainer.appendChild(pageNext);
+        });
+    }
+}
+
+
+function plannedOTState() {
+    syncScreenInputsToState();
+    return {
+        format: "POT1",
+        formData: JSON.parse(JSON.stringify(formData)),
+        plannedData: JSON.parse(JSON.stringify(plannedData))
+    };
+}
+
+function buildPOTFilename() {
+    syncScreenInputsToState();
+    const employee = (formData.subEmployee || "EMPLOYEE").trim().toUpperCase();
+    const month = (formData.periodMonth || "").trim();
+    const year = (formData.periodYear || "").trim();
+    const period = (formData.periodPayPeriod || "").replace(/\s+/g, "_");
+    const parts = [employee, "PLANNED OT", month, year, period].filter(Boolean);
+    return parts.join(" - ").replace(/[\\/:*?"<>|]/g, "_") + ".pot";
+}
+
+function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+function savePOTFile() {
+    try {
+        const state = plannedOTState();
+        downloadBlob(new Blob([JSON.stringify(state, null, 2)], {type: "application/json;charset=utf-8"}), buildPOTFilename());
+    } catch (err) {
+        console.error("POT save error:", err);
+        alert("Unable to save the Planned OT file.");
+    }
+}
+
+async function openPOTFile(event) {
+    const input = event.target;
+    const file = input.files && input.files[0];
+    input.value = "";
+    if (!file) return;
+    try {
+        const state = JSON.parse(await file.text());
+        if (!state || state.format !== "POT1" || !state.formData || !Array.isArray(state.plannedData)) {
+            throw new Error("Unsupported POT file");
+        }
+        formData = {...formData, ...state.formData};
+        plannedData = state.plannedData.map(row => {
+            const st = row.startTime || "";
+            const et = row.endTime || "";
+            return {
+                date: row.date || "",
+                startTime: st,
+                endTime: et,
+                time: st && et ? `${st} - ${et}` : (row.time || ""),
+                hours: st && et ? calculateHours(st, et) : (row.hours || ""),
+                description: row.description || ""
+            };
+        });
+        if (!plannedData.length) plannedData = [emptyPlannedOTRow()];
+        renderScreenView();
+        alert("Planned OT file loaded successfully.");
+    } catch (err) {
+        console.error("POT open error:", err);
+        alert("Unable to open this Planned OT file. Select a .pot file created by this app.");
+    }
+}
+
+function emptyPlannedOTRow() {
+    return {date:"", startTime:"", endTime:"", time:"", hours:"", description:""};
+}
+
+function toggleImportExportMenu(event) {
+    event.stopPropagation();
+    document.getElementById("importExportDropdown").classList.toggle("open");
+}
+
+function closeImportExportMenu() {
+    const menu = document.getElementById("importExportDropdown");
+    if (menu) menu.classList.remove("open");
+}
+
+document.addEventListener("click", function(event) {
+    const wrapper = document.getElementById("importExportMenu");
+    if (wrapper && !wrapper.contains(event.target)) closeImportExportMenu();
+});
+
+function exportToXLSX() {
+    if (typeof XLSX === "undefined") {
+        alert("The Excel module is unavailable. Connect to the internet and try again.");
+        return;
+    }
+    try {
+        const state = plannedOTState();
+        const wb = XLSX.utils.book_new();
+        const infoRows = [
+            {Field:"Pay Period Month", Value:formData.periodMonth || ""},
+            {Field:"Pay Period Year", Value:formData.periodYear || ""},
+            {Field:"Pay Period", Value:formData.periodPayPeriod || ""},
+            {Field:"Submitted By - Employee", Value:formData.subEmployee || ""},
+            {Field:"Submitted By - Position", Value:formData.subPosition || ""},
+            {Field:"Reviewer", Value:formData.reviewer || ""}
+        ];
+        const infoWs = XLSX.utils.json_to_sheet(infoRows);
+        infoWs["!cols"] = [{wch:30},{wch:55}];
+        XLSX.utils.book_append_sheet(wb, infoWs, "Report Information");
+
+        const entryRows = plannedData.map((row, i) => ({
+            "Entry No.": i + 1,
+            "Date": row.date || "",
+            "Start Time": row.startTime || "",
+            "End Time": row.endTime || "",
+            "Hours (Calculated)": row.startTime && row.endTime ? calculateHours(row.startTime, row.endTime) : "",
+            "Description of Work": row.description || ""
+        }));
+        const entriesWs = XLSX.utils.json_to_sheet(entryRows);
+        entriesWs["!cols"] = [{wch:12},{wch:14},{wch:14},{wch:14},{wch:20},{wch:65}];
+        XLSX.utils.book_append_sheet(wb, entriesWs, "Planned OT Entries");
+        const name = buildPOTFilename().replace(/\.pot$/i, ".xlsx");
+        XLSX.writeFile(wb, name);
+    } catch (err) {
+        console.error("XLSX export error:", err);
+        alert("Unable to export the XLSX file.");
+    }
+}
+
+function importFromXLSX(event) {
+    const input = event.target;
+    const file = input.files && input.files[0];
+    input.value = "";
+    if (!file) return;
+    if (typeof XLSX === "undefined") {
+        alert("The Excel module is unavailable. Connect to the internet and try again.");
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const wb = XLSX.read(e.target.result, {type:"array"});
+            const infoSheet = wb.Sheets["Report Information"];
+            const entrySheet = wb.Sheets["Planned OT Entries"];
+            if (!infoSheet || !entrySheet) {
+                throw new Error("Expected Report Information and Planned OT Entries worksheets.");
+            }
+            const info = XLSX.utils.sheet_to_json(infoSheet, {defval:""});
+            const values = {};
+            info.forEach(row => { values[String(row.Field || "").trim()] = row.Value == null ? "" : String(row.Value); });
+            formData.periodMonth = values["Pay Period Month"] || formData.periodMonth;
+            formData.periodYear = values["Pay Period Year"] || formData.periodYear;
+            formData.periodPayPeriod = values["Pay Period"] || formData.periodPayPeriod;
+            formData.subEmployee = values["Submitted By - Employee"] || "";
+            formData.subPosition = values["Submitted By - Position"] || "";
+            formData.reviewer = values["Reviewer"] || "";
+            const rows = XLSX.utils.sheet_to_json(entrySheet, {defval:""});
+            plannedData = rows.map(row => {
+                const st = normalizeImportedTime(row["Start Time"]);
+                const et = normalizeImportedTime(row["End Time"]);
+                const date = normalizeImportedDate(row["Date"]);
+                return {
+                    date, startTime:st, endTime:et,
+                    time: st && et ? `${st} - ${et}` : "",
+                    hours: st && et ? calculateHours(st, et) : "",
+                    description: String(row["Description of Work"] || "")
+                };
+            });
+            if (!plannedData.length) plannedData = [emptyPlannedOTRow()];
+            renderScreenView();
+            alert("XLSX file imported successfully.");
+        } catch (err) {
+            console.error("XLSX import error:", err);
+            alert("Unable to import this workbook. Use the two-sheet XLSX file exported by Planned OT Completion Report.");
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function normalizeImportedTime(value) {
+    if (value == null || value === "") return "";
+    if (typeof value === "number" && XLSX.SSF) {
+        const parts = XLSX.SSF.parse_date_code(value);
+        if (parts) {
+            const totalMinutes = Math.round((parts.H * 60 + parts.M + parts.S / 60) / 15) * 15;
+            const h24 = Math.floor(totalMinutes / 60) % 24;
+            const minute = totalMinutes % 60;
+            const h12 = h24 % 12 || 12;
+            return `${String(h12).padStart(2,"0")}:${String(minute).padStart(2,"0")}${h24 < 12 ? "am" : "pm"}`;
+        }
+    }
+    const raw = String(value).trim().toLowerCase();
+    const m = raw.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/);
+    if (m) return `${String(Number(m[1])).padStart(2,"0")}:${m[2]}${m[3]}`;
+    const m24 = raw.match(/^(\d{1,2}):(\d{2})$/);
+    if (m24) {
+        const h24 = Number(m24[1]), mins = m24[2];
+        const h12 = h24 % 12 || 12;
+        return `${String(h12).padStart(2,"0")}:${mins}${h24 < 12 ? "am" : "pm"}`;
+    }
+    return raw;
+}
+
+function normalizeImportedDate(value) {
+    if (value == null || value === "") return "";
+    if (typeof value === "number" && XLSX.SSF) {
+        const parsed = XLSX.SSF.parse_date_code(value);
+        if (parsed) return `${parsed.y}-${String(parsed.m).padStart(2,"0")}-${String(parsed.d).padStart(2,"0")}`;
+    }
+    const raw = String(value).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    const d = new Date(raw);
+    if (!Number.isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    return raw;
+}
+
+function exportToCSV() {
+    syncScreenInputsToState();
+    let csvContent = "data:text/csv;charset=utf-8,";
+    
+    csvContent += `Field,Value\r\n`;
+    csvContent += `PeriodMonth,"${formData.periodMonth}"\r\n`;
+    csvContent += `PeriodYear,"${formData.periodYear}"\r\n`;
+    csvContent += `PeriodPayPeriod,"${formData.periodPayPeriod}"\r\n`;
+    csvContent += `SubEmployee,"${formData.subEmployee}"\r\n`;
+    csvContent += `SubPosition,"${formData.subPosition}"\r\n`;
+    csvContent += `Reviewer,"${formData.reviewer}"\r\n`;
+    csvContent += `\r\nIndex,Date,StartTime,EndTime,Description\r\n`;
+
+    plannedData.forEach((row, i) => {
+        let cleanDesc = row.description ? row.description.replace(/\n/g, " ") : "";
+        csvContent += `${i+1},"${row.date}","${row.startTime}","${row.endTime}","${cleanDesc}"\r\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "Planned_Overtime_Data.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function triggerCSVImport(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        parseCSVData(text);
+        renderScreenView();
+        alert("CSV Database loaded successfully!");
+    };
+    reader.readAsText(file);
+}
+
+function parseCSVData(text) {
+    const lines = text.split(/\r\n|\n/);
+    let isTableSection = false;
+    let newRows = [];
+
+    lines.forEach(line => {
+        if (!line.trim()) return;
+        if (line.startsWith("Index,Date")) {
+            isTableSection = true;
+            return;
+        }
+
+        if (!isTableSection) {
+            let parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(val => val.replace(/^"|"$/g, "").trim());
+            if (parts.length >= 2) {
+                let fieldName = parts[0];
+                let fieldValue = parts[1];
+                if (fieldName === "PeriodMonth") formData.periodMonth = fieldValue;
+                if (fieldName === "PeriodYear") formData.periodYear = fieldValue;
+                if (fieldName === "PeriodPayPeriod") formData.periodPayPeriod = fieldValue;
+                if (fieldName === "SubEmployee") formData.subEmployee = fieldValue;
+                if (fieldName === "SubPosition") formData.subPosition = fieldValue;
+                if (fieldName === "Reviewer") formData.reviewer = fieldValue;
+            }
+        } else {
+            let cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(val => val.replace(/^"|"$/g, "").trim());
+            if (cols.length >= 5) {
+                let st = cols[2];
+                let et = cols[3];
+                let calculatedHours = "";
+                if (st && et) {
+                    let startMin = parseTimeToMinutes(st);
+                    let endMin = parseTimeToMinutes(et);
+                    if (startMin !== null && endMin !== null) {
+                        let diffMin = endMin - startMin;
+                        if (diffMin < 0) diffMin += 24 * 60;
+                        calculatedHours = (diffMin / 60).toFixed(2);
+                    }
+                }
+                newRows.push({
+                    date: cols[1],
+                    startTime: st,
+                    endTime: et,
+                    time: (st && et) ? `${st} - ${et}` : "",
+                    hours: calculatedHours,
+                    description: cols[4]
+                });
+            }
+        }
+    });
+
+    if (newRows.length > 0) {
+        plannedData = newRows;
+    }
+}
+
+function escapeHtml(value) {
+    return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+renderScreenView();
+</script>
+
+</body>
+</html>
